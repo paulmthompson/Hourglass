@@ -1,5 +1,5 @@
 #include <torch/torch.h>
-#include "include/residual.hpp"
+#include "include/hourglass.hpp"
 #include <iostream>
 
 int main() {
