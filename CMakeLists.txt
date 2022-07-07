@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Torch REQUIRED)
 
-add_executable(Hourglass hourglass.cpp)
+add_executable(Hourglass hourglass.cpp include/residual.hpp)
 target_link_libraries(Hourglass "${TORCH_LIBRARIES}")
 
 # The following code block is suggested to be used on Windows.

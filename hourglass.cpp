@@ -1,4 +1,5 @@
 #include <torch/torch.h>
+#include "include/residual.hpp"
 #include <iostream>
 
 int main() {
