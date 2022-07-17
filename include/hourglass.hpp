@@ -3,6 +3,9 @@
 
  #include "residual.hpp"
 
+ #include <vector>
+ #include <string>
+
  using namespace torch;
 
 struct FirstLayerImpl : nn::Module {
@@ -39,6 +42,29 @@ struct FirstLayerImpl : nn::Module {
     Residual r2;
 };
 TORCH_MODULE(FirstLayer);
+
+struct OutLayerImpl : nn::Module {
+    OutLayerImpl(int N)
+        : r1(N,N),
+        batch_norm1(N),
+        conv1(nn::ConvTranspose2dOptions(N,N,1))
+ {
+   register_module("r1",r1);
+   register_module("batch_norm1",batch_norm1);
+   register_module("conv1",conv1);
+ }
+
+  torch::Tensor forward(torch::Tensor input) {
+   torch::Tensor x = r1(input);
+   x = conv1(x);
+   x = torch::relu(batch_norm1(x));
+   return x;
+ }
+    nn::ConvTranspose2d conv1;
+    nn::BatchNorm2d batch_norm1;
+    Residual r1;
+};
+TORCH_MODULE(OutLayer);
 
 struct HourglassImpl : nn::Module {
     HourglassImpl(int N)
@@ -145,3 +171,68 @@ struct HourglassImpl : nn::Module {
     nn::MaxUnpool2d unpool4,unpool3,unpool2,unpool1;
 };
 TORCH_MODULE(Hourglass);
+
+struct StackedHourglassImpl : nn::Module {
+    StackedHourglassImpl(int nstack,int N,int k)
+        : fb(N),
+        hg(nstack,Hourglass(N)),
+        o1(nstack,OutLayer(N)),
+        c1(nstack,Conv0(N,N,1,1,0)),
+        merge_features(nstack-1,Conv0(N,N,1,1,0)),
+        merge_preds(nstack-1,Conv0(k,N,1,1,0))
+
+ {
+   register_module("fb",fb);
+   for (int i=0; i<nstack;i++) {
+
+    std::string hg_tmp_name = "hg" + std::to_string(i);
+    std::string o1_tmp_name = "o1" + std::to_string(i);
+    std::string c1_tmp_name = "c1" + std::to_string(i);
+
+    register_module(hg_tmp_name,hg[i]);
+    register_module(o1_tmp_name,o1[i]);
+    register_module(c1_tmp_name,c1[i]);
+
+   }
+   for (int i=0; i<nstack-1;i++) {
+
+    std::string features_tmp_name = "features" + std::to_string(i);
+    std::string preds_tmp_name = "preds" + std::to_string(i);
+
+    register_module(features_tmp_name,merge_features[i]);
+    register_module(preds_tmp_name,merge_preds[i]);
+
+   }
+ }
+
+  std::vector<torch::Tensor> forward(torch::Tensor input) {
+   torch::Tensor x = fb(input);
+
+   std::vector<torch::Tensor> temps;
+   std::vector<torch::Tensor> preds;
+
+   temps.push_back(x);
+
+   for (int i=0; i<hg.size(); i++) {
+    torch::Tensor hg_out = hg[i](temps[i]);
+    torch::Tensor features = o1[i](hg_out);
+    torch::Tensor pred = c1[i](features);
+    preds.push_back(pred);
+    if (i < hg.size()-1) {
+      torch::Tensor m_features = merge_features[i](features);
+      torch::Tensor m_preds = merge_preds[i](pred);
+      torch::Tensor temp1 = m_features + m_preds;
+      temps.push_back(temp1 + temps[i]);
+    }
+   }
+   
+   return preds;
+ }
+    FirstLayer fb;
+    std::vector<Hourglass> hg;
+    std::vector<OutLayer> o1;
+    std::vector<Conv0> c1;
+    std::vector<Conv0> merge_features;
+    std::vector<Conv0> merge_preds;
+};
+TORCH_MODULE(StackedHourglass);
