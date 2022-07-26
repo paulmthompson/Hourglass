@@ -1,5 +1,7 @@
 #include <torch/torch.h>
 #include "include/hourglass.hpp"
+#include "include/dataload.hpp"
+
 #include <iostream>
 
 int main() {
