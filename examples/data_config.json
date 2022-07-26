@@ -1,0 +1,45 @@
+{
+    "name": "example-dataset",
+    "folder_path": "C:\\path\\to\\my\\dataset",
+    "experiments": [
+        {
+        "name": "experiment_1"
+
+        },
+        {
+        "name": "experiment_2"
+        }
+    ],
+    "images": {
+        "views": [
+            {
+                "name": "sideview",
+                "prefix": "frames_side_original_*",
+                "label_prefix": "frames_side_mask_*"
+            },
+            {
+                "name": "bottomview",
+                "prefix": "frames_bottom_original_",
+                "label_prefix": "frames_bottom_mask_*"
+            }
+        ],
+        "name_prefix": "scene",
+        "filetypes": [
+            {
+                "name": "png"
+            }
+        ]
+    },
+    "labels": {
+        "names": [
+                "."
+
+        ],
+        "name_prefix": "scene",
+        "filetypes": [
+            {
+                "name": "png"
+            }
+        ]
+    }
+}

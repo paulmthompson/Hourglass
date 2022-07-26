@@ -1,0 +1,43 @@
+{
+    "name": "example-dataset",
+    "folder_path": "C:\\path\\to\\my\\dataset",
+    "experiments": [
+        {
+        "name": "experiment_1"
+
+        },
+        {
+        "name": "experiment_2"
+        }
+    ],
+    "images": {
+        "views": [
+            {
+                "name": "topview",
+                "prefix": "images",
+                "label_prefix": "labels/left"
+            }
+        ],
+        "name_prefix": "img",
+        "filetypes": [
+            {
+                "name": "png"
+            }
+        ]
+    },
+    "labels": {
+        "names": [
+                "1/labels",
+                "2/labels",
+                "3/labels",
+                "4/labels"
+
+        ],
+        "name_prefix": "w",
+        "filetypes": [
+            {
+                "name": "png"
+            }
+        ]
+    }
+}
