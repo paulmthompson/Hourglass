@@ -5,6 +5,7 @@
 #include <iostream>
 #include <filesystem>
 #include <optional>
+#include <regex>
 
 using namespace torch;
 namespace fs = std::filesystem;
@@ -33,17 +34,26 @@ std::filesystem::path generate_output_path_from_json(std::filesystem::path folde
 
 };
 
-void add_image_to_load(std::vector<std::string>& img_files, const std::filesystem::path& folder_path, const json& json_filetypes) {
+struct name_and_path {
+    std::string name;
+    std::filesystem::path path;
+};
+
+std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
     
+    std::vector<name_and_path> out_images;
+
+    std::regex image_regex(json_prefix);
     for (const auto & file_type : json_filetypes) {
         for (const auto & entry : fs::directory_iterator(folder_path)) {
             if (entry.path().extension() == file_type) {
                 std::filesystem::path image_file_path = folder_path / entry.path();
-                img_files.push_back(image_file_path.string());
+                std::string image_name = std::regex_replace(entry.path().stem().string(), image_regex, "");
+                out_images.push_back(name_and_path{image_name,image_file_path});
             }
         }
     }
-
+    return out_images;
 };
 
 void read_json_file(const std::string& config_file) {
@@ -56,8 +66,8 @@ void read_json_file(const std::string& config_file) {
 
     std::filesystem::path data_path = data["folder_path"];
 
-    std::vector<std::string> img_files;
-    std::vector<std::string> label_files;
+    std::vector<std::filesystem::path> img_files;
+    std::vector<std::filesystem::path> label_files;
 
     for (const auto& entry : data["experiments"]) {
 
@@ -73,7 +83,7 @@ void read_json_file(const std::string& config_file) {
 
             std::cout << "This experiment image data is " << img_folder_path << std::endl;
 
-            add_image_to_load(img_files,img_folder_path,data["images"]["filetypes"]);
+            std::vector<name_and_path> this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
 
             std::filesystem::path label_folder_path = experiment_path;
 
@@ -81,7 +91,18 @@ void read_json_file(const std::string& config_file) {
 
             std::cout << "This experiment label data is " << label_folder_path << std::endl;
 
-            add_image_to_load(label_files,label_folder_path,data["labels"]["filetypes"]);
+            std::vector<name_and_path> this_view_labels = add_image_to_load(label_folder_path,data["labels"]["filetypes"],data["labels"]["name_prefix"]);
+
+            for (const auto& this_img : this_view_images) {
+                for (const auto& this_label : this_view_labels) {
+                    if (this_img.name.compare(this_label.name) == 0) {
+                        img_files.push_back(this_img.path);
+                        label_files.push_back(this_label.path);
+                        break;
+                    }
+                }
+            }
+
         }  
     }
 
