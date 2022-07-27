@@ -19,11 +19,7 @@
             }
         ],
         "name_prefix": "img",
-        "filetypes": [
-            {
-                "name": "png"
-            }
-        ]
+        "filetypes": [".png"]
     },
     "labels": {
         "names": [
@@ -34,10 +30,6 @@
 
         ],
         "name_prefix": "w",
-        "filetypes": [
-            {
-                "name": "png"
-            }
-        ]
+        "filetypes": [".png"]
     }
 }

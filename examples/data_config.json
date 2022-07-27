@@ -24,18 +24,11 @@
             }
         ],
         "name_prefix": "scene",
-        "filetypes": ["png"]
+        "filetypes": [".png"]
     },
     "labels": {
-        "names": [
-                "."
-
-        ],
+        "names": ["."],
         "name_prefix": "scene",
-        "filetypes": [
-            {
-                "name": "png"
-            }
-        ]
+        "filetypes": [".png"]
     }
 }
