@@ -22,16 +22,17 @@ std::optional<std::string> match_folder_in_path(const std::filesystem::path& dir
     return std::nullopt;
 };
 
-std::filesystem::path generate_output_path_from_json(std::filesystem::path folder_path, const json& subpaths_json) {
+std::filesystem::path generate_output_path_from_json(const std::filesystem::path& folder_path, const json& subpaths_json) {
+
+    std::filesystem::path output_path = folder_path;
 
     for (const auto& sub_path : subpaths_json) {
-        std::optional<std::string> matched_folder = match_folder_in_path(folder_path,sub_path);
+        std::optional<std::string> matched_folder = match_folder_in_path(output_path,sub_path);
         if (matched_folder) {
-            folder_path /= matched_folder.value();
+            output_path /= matched_folder.value();
         }
     }
-    return folder_path;
-
+    return output_path;
 };
 
 struct name_and_path {
@@ -67,27 +68,23 @@ void read_json_file(const std::string& config_file) {
     std::filesystem::path data_path = data["folder_path"];
 
     std::vector<std::filesystem::path> img_files;
-    std::vector<std::filesystem::path> label_files;
+    std::vector<std::filesystem::path> label_files; // This should be vector of vectors to account for different label sizes
 
     for (const auto& entry : data["experiments"]) {
 
-        std::filesystem::path experiment_path = data_path / entry["name"];
+        auto experiment_path = data_path / entry["name"];
 
         std::cout << "Loading experiment path: " << experiment_path << std::endl;
 
         for (const auto& this_view : data["images"]["views"]) {
 
-            std::filesystem::path img_folder_path = experiment_path;
-            
-            img_folder_path = generate_output_path_from_json(img_folder_path, this_view["prefix"]);
+            auto img_folder_path = generate_output_path_from_json(experiment_path, this_view["prefix"]);
 
             std::cout << "This experiment image data is " << img_folder_path << std::endl;
 
             std::vector<name_and_path> this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
 
-            std::filesystem::path label_folder_path = experiment_path;
-
-            label_folder_path = generate_output_path_from_json(label_folder_path, this_view["label_prefix"]);
+            auto label_folder_path = generate_output_path_from_json(experiment_path, this_view["label_prefix"]);
 
             std::cout << "This experiment label data is " << label_folder_path << std::endl;
 
