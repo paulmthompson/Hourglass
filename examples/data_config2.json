@@ -14,8 +14,8 @@
         "views": [
             {
                 "name": "topview",
-                "prefix": "images",
-                "label_prefix": "labels/left"
+                "prefix": ["images"],
+                "label_prefix": ["labels","left"]
             }
         ],
         "name_prefix": "img",

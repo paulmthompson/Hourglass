@@ -14,21 +14,17 @@
         "views": [
             {
                 "name": "sideview",
-                "prefix": "frames_side_original_*",
-                "label_prefix": "frames_side_mask_*"
+                "prefix": ["frames_side_original"],
+                "label_prefix": ["frames_side_mask"]
             },
             {
                 "name": "bottomview",
-                "prefix": "frames_bottom_original_",
-                "label_prefix": "frames_bottom_mask_*"
+                "prefix": ["frames_bottom_original"],
+                "label_prefix": ["frames_bottom_mask"]
             }
         ],
         "name_prefix": "scene",
-        "filetypes": [
-            {
-                "name": "png"
-            }
-        ]
+        "filetypes": ["png"]
     },
     "labels": {
         "names": [
