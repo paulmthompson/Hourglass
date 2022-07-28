@@ -26,7 +26,24 @@ int main(int argc, char** argv) {
 
     std::cout << "Configuration file is " << result["data"].as<std::string>() << std::endl;
 
-    auto data_set = MyDataset(result["data"].as<std::string>());
+    auto data_set = MyDataset(result["data"].as<std::string>()).map(torch::data::transforms::Stack<>());
+
+    std::cout << "Data Loaded" << std::endl;
+    std::cout << "Data size is " << data_set.size().value() << std::endl;
+
+    int batch_size = 16;
+    auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
+      std::move(data_set), 
+      batch_size);
+    
+    for (torch::data::Example<>& batch : *data_loader) {
+
+      auto data = batch.data;
+      auto labels = batch.target;
+
+      std::cout << "Batch size: " << data.size(0) << std::endl;
+    }
+
 
     exit(0);
   }

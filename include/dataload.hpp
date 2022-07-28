@@ -73,7 +73,7 @@ torch::Tensor load_image(const std::filesystem::path& image_path) {
 
     // (We use torch::empty here since it can be somewhat faster than `zeros` //  or `ones` since it is allowed to fill the tensor with garbage.) 
     auto tensor = torch::empty(
-           { image.rows, image.cols, image.channels() },
+           { image.rows, image.cols, image.channels()},
             // Set dtype=byte and place on CPU, you can change these to whatever   
             // suits your use-case.   
             torch::TensorOptions()  
@@ -89,12 +89,17 @@ torch::Tensor load_image(const std::filesystem::path& image_path) {
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
  torch::Tensor read_images(const std::vector<std::filesystem::path>& image_paths) 
  {
-    torch::Tensor tensor;
+    std::vector<torch::Tensor> tensor;
+
     for (auto& img_file : image_paths) {
-        torch::cat({tensor,load_image(img_file)},3);
+        tensor.push_back(load_image(img_file));
     }
 
-    return tensor;
+    auto stacked = torch::stack(torch::TensorList(tensor));
+
+    std::cout << "The size of image array is " << stacked.sizes() << std::endl;
+
+    return stacked;
  };
 
 std::tuple<paths,paths> read_json_file(const std::string& config_file) {
@@ -158,8 +163,12 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
         explicit MyDataset(const std::string& config_file) 
         {
             auto [img_files, label_files] = read_json_file(config_file);
+
             states_ = read_images(img_files);
+            std::cout << "Images Loaded" << std::endl;
+
             labels_ = read_images(label_files);
+            std::cout << "Labels Loaded" << std::endl;
         };
         torch::data::Example<> get(size_t index) override;
         optional<size_t> size() const override;
@@ -172,4 +181,4 @@ torch::data::Example<> MyDataset::get(size_t index)
     return {states_[index], labels_[index]};
 };
 
-optional<size_t> MyDataset::size() const { return states_.size(3); }
+optional<size_t> MyDataset::size() const { return states_.size(0); }
