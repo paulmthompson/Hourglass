@@ -9,15 +9,15 @@
  using namespace torch;
 
 struct FirstLayerImpl : nn::Module {
-    FirstLayerImpl(int N)
-        : batch_norm1(3),
-        conv1(nn::ConvTranspose2dOptions(3,64,7)
+    FirstLayerImpl(int N_Channel, int N_Input_Channel)
+        : batch_norm1(N_Input_Channel),
+        conv1(nn::ConvTranspose2dOptions(N_Input_Channel,64,7)
             .stride(2)
             .padding(3)),
         r1(64,128),
         p1(nn::MaxPool2dOptions({2,2})),
         r2(128,128),
-        r3(128,N)
+        r3(128,N_Channel)
  {
    register_module("conv1", conv1);
    register_module("batch_norm1",batch_norm1);
@@ -173,8 +173,8 @@ struct HourglassImpl : nn::Module {
 TORCH_MODULE(Hourglass);
 
 struct StackedHourglassImpl : nn::Module {
-    StackedHourglassImpl(int nstack,int N,int k)
-        : fb(N),
+    StackedHourglassImpl(int nstack,int N,int k,int N_Input_Channel)
+        : fb(N,N_Input_Channel),
         hg(nstack,Hourglass(N)),
         o1(nstack,OutLayer(N)),
         c1(nstack,Conv0(N,N,1,1,0)),

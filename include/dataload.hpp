@@ -85,7 +85,7 @@ torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) 
     // Copy over the data 
     std::memcpy(tensor.data_ptr(), reinterpret_cast<void*>(image.data), tensor.numel() * sizeof(at::kByte));
 
-    return tensor;
+    return tensor.permute({2,0,1});
 };
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
