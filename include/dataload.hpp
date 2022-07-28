@@ -65,7 +65,7 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
 
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
 torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) {
-    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_UNCHANGED);
+    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
     cv::Mat image;
     cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
 
