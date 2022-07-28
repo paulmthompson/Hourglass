@@ -8,11 +8,28 @@ find_package(Torch REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
 
+#Image Loading
+find_package(PNG REQUIRED)
+find_package(OpenCV REQUIRED)
+
 add_executable(Hourglass hourglass.cpp include/hourglass.hpp include/residual.hpp include/dataload.hpp)
+
+if( OpenCV_FOUND )
+  # Additional Include Directories
+  target_include_directories(Hourglass PRIVATE ${OpenCV_INCLUDE_DIRS} )
+
+  # Additional Library Directories
+  target_link_directories(Hourglass PRIVATE ${OpenCV_LIB_DIR} )
+
+  # Additional Dependencies
+  target_link_libraries(Hourglass PRIVATE ${OpenCV_LIBS} )
+endif()
 
 target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
+target_link_libraries(Hourglass PRIVATE PNG::PNG)
+#target_link_libraries(Hourglass PRIVATE ${OpenCV_LIBS})
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,

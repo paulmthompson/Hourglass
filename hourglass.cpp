@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Configuration file is " << result["data"].as<std::string>() << std::endl;
 
-    read_json_file(result["data"].as<std::string>());
+    auto data_set = MyDataset(result["data"].as<std::string>());
 
     exit(0);
   }

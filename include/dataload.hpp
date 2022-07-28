@@ -1,15 +1,21 @@
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <string>
 #include <iostream>
 #include <filesystem>
 #include <optional>
 #include <regex>
+#include <tuple>
 
 using namespace torch;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
+
+using namespace cv;
+
+using paths = std::vector<std::filesystem::path>;
 
 //https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 std::optional<std::string> match_folder_in_path(const std::filesystem::path& dir_path,std::string folder_path) {
@@ -57,7 +63,41 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
     return out_images;
 };
 
-void read_json_file(const std::string& config_file) {
+//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
+torch::Tensor load_image(const std::filesystem::path& image_path) {
+    cv::Mat image = cv::imread(image_path.string(),cv::IMREAD_UNCHANGED);
+
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
+    }
+
+    // (We use torch::empty here since it can be somewhat faster than `zeros` //  or `ones` since it is allowed to fill the tensor with garbage.) 
+    auto tensor = torch::empty(
+           { image.rows, image.cols, image.channels() },
+            // Set dtype=byte and place on CPU, you can change these to whatever   
+            // suits your use-case.   
+            torch::TensorOptions()  
+               .dtype(torch::kByte)   
+               .device(torch::kCPU));     
+               
+    // Copy over the data 
+    std::memcpy(tensor.data_ptr(), reinterpret_cast<void*>(image.data), tensor.numel() * sizeof(at::kByte));
+
+    return tensor;
+};
+
+ //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
+ torch::Tensor read_images(const std::vector<std::filesystem::path>& image_paths) 
+ {
+    torch::Tensor tensor;
+    for (auto& img_file : image_paths) {
+        torch::cat({tensor,load_image(img_file)},3);
+    }
+
+    return tensor;
+ };
+
+std::tuple<paths,paths> read_json_file(const std::string& config_file) {
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -105,21 +145,9 @@ void read_json_file(const std::string& config_file) {
 
     std::cout << "The total number of images is " << img_files.size() << std::endl;
     std::cout << "The total number of labels is " << label_files.size() << std::endl;
-    
+
+    return make_tuple(img_files,label_files);
 };
-
- //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- torch::Tensor read_img(const std::string& config_file) 
- {
-    torch::Tensor tensor;
-    return tensor;
- };
-
- torch::Tensor read_labels(const std::string& config_file)
- {
-    torch::Tensor tensor;
-    return tensor;
- };
 
  class MyDataset : public torch::data::Dataset<MyDataset>
 {
@@ -128,12 +156,13 @@ void read_json_file(const std::string& config_file) {
 
     public:
         explicit MyDataset(const std::string& config_file) 
-            : states_(read_img(config_file)),
-              labels_(read_labels(config_file))
         {
-
+            auto [img_files, label_files] = read_json_file(config_file);
+            states_ = read_images(img_files);
+            labels_ = read_images(label_files);
         };
         torch::data::Example<> get(size_t index) override;
+        optional<size_t> size() const override;
 };
 
 torch::data::Example<> MyDataset::get(size_t index)
@@ -141,4 +170,6 @@ torch::data::Example<> MyDataset::get(size_t index)
     // You may for example also read in a .csv file that stores locations
     // to your data and then read in the data at this step. Be creative.
     return {states_[index], labels_[index]};
-} 
+};
+
+optional<size_t> MyDataset::size() const { return states_.size(3); }
