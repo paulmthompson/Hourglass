@@ -29,9 +29,7 @@ struct FirstLayerImpl : nn::Module {
  }
 
   torch::Tensor forward(torch::Tensor input) {
-    std::cout << input.sizes() << std::endl;
    torch::Tensor x = conv1(torch::relu(batch_norm1(input)));
-   std::cout << x.sizes() << std::endl;
    x = r1(x);
    x = p1(x);
    x = r2(x);
@@ -180,7 +178,7 @@ struct StackedHourglassImpl : nn::Module {
         : fb(N,N_Input_Channel),
         hg(nstack,Hourglass(N)),
         o1(nstack,OutLayer(N)),
-        c1(nstack,Conv0(N,N,1,1,0)),
+        c1(nstack,Conv0(N,k,1,1,0)),
         merge_features(nstack-1,Conv0(N,N,1,1,0)),
         merge_preds(nstack-1,Conv0(k,N,1,1,0))
 
@@ -218,13 +216,25 @@ struct StackedHourglassImpl : nn::Module {
 
    for (int i=0; i<hg.size(); i++) {
     torch::Tensor hg_out = hg[i](temps[i]);
+    //std::cout << hg_out.sizes() << std::endl;
+
     torch::Tensor features = o1[i](hg_out);
+    //std::cout << features.sizes() << std::endl;
+
     torch::Tensor pred = c1[i](features);
+    std::cout << "Hourglass prediction matrix size is " << pred.sizes() << std::endl;
+
     preds.push_back(pred);
     if (i < hg.size()-1) {
       torch::Tensor m_features = merge_features[i](features);
+      std::cout << m_features.sizes() << std::endl;
+
       torch::Tensor m_preds = merge_preds[i](pred);
+       std::cout << m_preds.sizes() << std::endl;
+
       torch::Tensor temp1 = m_features + m_preds;
+       std::cout << temp1.sizes() << std::endl;
+
       temps.push_back(temp1 + temps[i]);
     }
    }

@@ -1,7 +1,8 @@
- 
  #include <torch/torch.h>
- using namespace torch;
 
+ #include <iostream>
+
+ using namespace torch;
 
 struct Conv0Impl : nn::Module {
     Conv0Impl(int input_dim, int output_dim, int kernel_size,int stride, int padding)
@@ -12,7 +13,7 @@ struct Conv0Impl : nn::Module {
     register_module("conv1",conv1);
 }
  torch::Tensor forward(torch::Tensor x) {
-   conv1(x);
+   x = conv1(x);
    return x;
  }
  nn::Conv2d conv1;
@@ -24,7 +25,7 @@ struct ResidualImpl : nn::Module {
         : batch_norm1(input_dim),
         conv1(nn::Conv2dOptions(input_dim,output_dim / 2,1)
             .stride(1)
-            .padding(1)),
+            .padding(0)),
         batch_norm2(output_dim / 2),
         conv2(nn::Conv2dOptions(output_dim / 2, output_dim / 2, 3)
             .stride(1)
@@ -42,7 +43,7 @@ struct ResidualImpl : nn::Module {
    register_module("batch_norm3", batch_norm3);
  }
 
-  torch::Tensor forward(torch::Tensor input) {
+   torch::Tensor forward(torch::Tensor input) {
    torch::Tensor x = conv1(torch::relu(batch_norm1(input)));
    x = conv2(torch::relu(batch_norm2(x)));
    x = conv3(torch::relu(batch_norm3(x)));

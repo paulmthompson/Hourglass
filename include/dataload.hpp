@@ -101,7 +101,7 @@ torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) 
 
     std::cout << "The size of image array is " << stacked.sizes() << std::endl;
 
-    return stacked;
+    return stacked.to(torch::kFloat32);
  };
 
 std::tuple<paths,paths> read_json_file(const std::string& config_file) {
