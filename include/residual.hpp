@@ -5,7 +5,7 @@
 
 struct Conv0Impl : nn::Module {
     Conv0Impl(int input_dim, int output_dim, int kernel_size,int stride, int padding)
-    : conv1(nn::ConvTranspose2dOptions(input_dim,output_dim,kernel_size)
+    : conv1(nn::Conv2dOptions(input_dim,output_dim,kernel_size)
             .stride(stride)
             .padding(padding))
 {
@@ -15,22 +15,22 @@ struct Conv0Impl : nn::Module {
    conv1(x);
    return x;
  }
- nn::ConvTranspose2d conv1;
+ nn::Conv2d conv1;
 };
 TORCH_MODULE(Conv0);
 
 struct ResidualImpl : nn::Module {
     ResidualImpl(int input_dim, int output_dim)
         : batch_norm1(input_dim),
-        conv1(nn::ConvTranspose2dOptions(input_dim,output_dim / 2,1)
+        conv1(nn::Conv2dOptions(input_dim,output_dim / 2,1)
             .stride(1)
             .padding(1)),
         batch_norm2(output_dim / 2),
-        conv2(nn::ConvTranspose2dOptions(output_dim / 2, output_dim / 2, 3)
+        conv2(nn::Conv2dOptions(output_dim / 2, output_dim / 2, 3)
             .stride(1)
             .padding(1)),
         batch_norm3(output_dim / 2),
-        conv3(nn::ConvTranspose2dOptions(output_dim / 2, output_dim, 1)
+        conv3(nn::Conv2dOptions(output_dim / 2, output_dim, 1)
             .stride(1)
             .padding(0))
  {
@@ -48,7 +48,7 @@ struct ResidualImpl : nn::Module {
    x = conv3(torch::relu(batch_norm3(x)));
    return x + input;
  }
-    nn::ConvTranspose2d conv1, conv2, conv3;
+    nn::Conv2d conv1, conv2, conv3;
     nn::BatchNorm2d batch_norm1, batch_norm2, batch_norm3;
 };
 TORCH_MODULE(Residual);
@@ -56,19 +56,19 @@ TORCH_MODULE(Residual);
 
 struct Residual_SkipImpl : nn::Module {
     Residual_SkipImpl(int input_dim, int output_dim)
-        : conv1(nn::ConvTranspose2dOptions(input_dim,output_dim,1)
+        : conv1(nn::Conv2dOptions(input_dim,output_dim,1)
             .stride(1)
             .padding(0)),
         batch_norm1(input_dim),
-        conv2(nn::ConvTranspose2dOptions(input_dim,output_dim / 2,1)
+        conv2(nn::Conv2dOptions(input_dim,output_dim / 2,1)
             .stride(1)
             .padding(0)),
         batch_norm2(output_dim / 2),
-        conv3(nn::ConvTranspose2dOptions(output_dim / 2, output_dim / 2, 3)
+        conv3(nn::Conv2dOptions(output_dim / 2, output_dim / 2, 3)
             .stride(1)
             .padding(1)),
         batch_norm3(output_dim / 2),
-        conv4(nn::ConvTranspose2dOptions(output_dim / 2, output_dim, 1)
+        conv4(nn::Conv2dOptions(output_dim / 2, output_dim, 1)
             .stride(1)
             .padding(0))
  {
@@ -87,7 +87,7 @@ struct Residual_SkipImpl : nn::Module {
    x = conv4(torch::relu(batch_norm3(x)));
    return x + conv1(input);
  }
-    nn::ConvTranspose2d conv1, conv2, conv3, conv4;
+    nn::Conv2d conv1, conv2, conv3, conv4;
     nn::BatchNorm2d batch_norm1, batch_norm2, batch_norm3;
 };
 TORCH_MODULE(Residual_Skip);

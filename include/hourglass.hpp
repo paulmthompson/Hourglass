@@ -5,13 +5,14 @@
 
  #include <vector>
  #include <string>
+ #include <iostream>
 
  using namespace torch;
 
 struct FirstLayerImpl : nn::Module {
     FirstLayerImpl(int N_Channel, int N_Input_Channel)
         : batch_norm1(N_Input_Channel),
-        conv1(nn::ConvTranspose2dOptions(N_Input_Channel,64,7)
+        conv1(nn::Conv2dOptions(N_Input_Channel,64,7)
             .stride(2)
             .padding(3)),
         r1(64,128),
@@ -28,14 +29,16 @@ struct FirstLayerImpl : nn::Module {
  }
 
   torch::Tensor forward(torch::Tensor input) {
+    std::cout << input.sizes() << std::endl;
    torch::Tensor x = conv1(torch::relu(batch_norm1(input)));
+   std::cout << x.sizes() << std::endl;
    x = r1(x);
    x = p1(x);
    x = r2(x);
    x = r3(x);
    return x;
  }
-    nn::ConvTranspose2d conv1;
+    nn::Conv2d conv1;
     nn::BatchNorm2d batch_norm1;
     Residual_Skip r1,r3;
     nn::MaxPool2d p1;
@@ -47,7 +50,7 @@ struct OutLayerImpl : nn::Module {
     OutLayerImpl(int N)
         : r1(N,N),
         batch_norm1(N),
-        conv1(nn::ConvTranspose2dOptions(N,N,1))
+        conv1(nn::Conv2dOptions(N,N,1))
  {
    register_module("r1",r1);
    register_module("batch_norm1",batch_norm1);
@@ -60,7 +63,7 @@ struct OutLayerImpl : nn::Module {
    x = torch::relu(batch_norm1(x));
    return x;
  }
-    nn::ConvTranspose2d conv1;
+    nn::Conv2d conv1;
     nn::BatchNorm2d batch_norm1;
     Residual r1;
 };
