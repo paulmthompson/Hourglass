@@ -64,8 +64,10 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
 };
 
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-torch::Tensor load_image(const std::filesystem::path& image_path) {
-    cv::Mat image = cv::imread(image_path.string(),cv::IMREAD_UNCHANGED);
+torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) {
+    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_UNCHANGED);
+    cv::Mat image;
+    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
 
     if (!image.isContinuous()) {   
         image = image.clone(); 
@@ -87,12 +89,12 @@ torch::Tensor load_image(const std::filesystem::path& image_path) {
 };
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- torch::Tensor read_images(const std::vector<std::filesystem::path>& image_paths) 
+ torch::Tensor read_images(const std::vector<std::filesystem::path>& image_paths, int w, int h) 
  {
     std::vector<torch::Tensor> tensor;
 
     for (auto& img_file : image_paths) {
-        tensor.push_back(load_image(img_file));
+        tensor.push_back(load_image(img_file,w,h));
     }
 
     auto stacked = torch::stack(torch::TensorList(tensor));
@@ -154,6 +156,17 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
     return make_tuple(img_files,label_files);
 };
 
+std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
+
+    std::ifstream f(config_file);
+    json data = json::parse(f);
+    f.close();
+
+    std::vector<int> height_width = data[keyword]["resolution"];
+
+    return std::make_tuple(height_width[0],height_width[1]);
+};
+
  class MyDataset : public torch::data::Dataset<MyDataset>
 {
     private:
@@ -164,10 +177,14 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
         {
             auto [img_files, label_files] = read_json_file(config_file);
 
-            states_ = read_images(img_files);
+            auto [w_img, h_img] = get_width_height(config_file,"images");
+
+            states_ = read_images(img_files,w_img,h_img);
             std::cout << "Images Loaded" << std::endl;
 
-            labels_ = read_images(label_files);
+            auto [w_label, h_label] = get_width_height(config_file,"labels");
+
+            labels_ = read_images(label_files,w_label,h_label);
             std::cout << "Labels Loaded" << std::endl;
         };
         torch::data::Example<> get(size_t index) override;
