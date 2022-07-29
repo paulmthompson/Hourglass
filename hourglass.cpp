@@ -5,6 +5,7 @@
 #include <cxxopts.hpp>
 
 #include <iostream>
+#include <numeric>
 
 int main(int argc, char** argv) {
 
@@ -36,6 +37,8 @@ int main(int argc, char** argv) {
     auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
       std::move(data_set), 
       batch_size);
+
+    std::vector<float> all_losses;
     
     StackedHourglass hourglass(4,64,1,1);
 
@@ -53,34 +56,36 @@ int main(int argc, char** argv) {
 
         auto output = hourglass->forward(data);
 
-        std::cout << "Hourglass evaluated" << std::endl;
-
         std::vector<torch::Tensor> losses;
         for (auto& level_output : output) {
           losses.push_back(torch::mse_loss(level_output, labels));
         }
-        for (auto& loss : losses) {
-          loss.backward();
+        torch::Tensor loss = losses[0];
+        for (int i = 1 ; i<losses.size(); i ++) {
+          //try {
+          loss += losses[i];
+          //} catch (const c10::Error& e) {
+          // std::cout << e.msg() << std::endl;
+          //}
         }
 
+        loss.backward();
+
         optimizer.step();
+
+        all_losses.push_back(loss.item<float>());
+
         std::printf(
             "\r[%2ld/%2ld][%3ld] D_loss: %.4f",
             epoch,
             kNumberOfEpochs,
             ++batch_index,
-            losses[losses.size()].item<float>());
+            loss.item<float>());
       }
     }
 
-
     exit(0);
   }
-
-
-  torch::Tensor tensor = torch::rand({2, 3});
-  std::cout << tensor << std::endl;
-
 
   return 0;
 }

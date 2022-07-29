@@ -216,24 +216,18 @@ struct StackedHourglassImpl : nn::Module {
 
    for (int i=0; i<hg.size(); i++) {
     torch::Tensor hg_out = hg[i](temps[i]);
-    //std::cout << hg_out.sizes() << std::endl;
 
     torch::Tensor features = o1[i](hg_out);
-    //std::cout << features.sizes() << std::endl;
 
     torch::Tensor pred = c1[i](features);
-    std::cout << "Hourglass prediction matrix size is " << pred.sizes() << std::endl;
 
     preds.push_back(pred);
     if (i < hg.size()-1) {
       torch::Tensor m_features = merge_features[i](features);
-      std::cout << m_features.sizes() << std::endl;
 
       torch::Tensor m_preds = merge_preds[i](pred);
-       std::cout << m_preds.sizes() << std::endl;
 
       torch::Tensor temp1 = m_features + m_preds;
-       std::cout << temp1.sizes() << std::endl;
 
       temps.push_back(temp1 + temps[i]);
     }
