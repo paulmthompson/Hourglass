@@ -17,6 +17,8 @@ using namespace cv;
 
 using paths = std::vector<std::filesystem::path>;
 
+#pragma once
+
 //https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
 std::optional<std::string> match_folder_in_path(const std::filesystem::path& dir_path,std::string folder_path) {
 
@@ -98,8 +100,6 @@ torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) 
     }
 
     auto stacked = torch::stack(torch::TensorList(tensor));
-
-    std::cout << "The size of image array is " << stacked.sizes() << std::endl;
 
     return stacked.to(torch::kFloat32);
  };
@@ -186,6 +186,8 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
             labels_ = read_images(label_files,w_label,h_label);
             std::cout << "Labels Loaded" << std::endl;
+
+            std::cout << "Data size is " << states_.size(0) << std::endl;
         };
         torch::data::Example<> get(size_t index) override;
         optional<size_t> size() const override;

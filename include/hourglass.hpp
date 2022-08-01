@@ -9,6 +9,8 @@
 
  using namespace torch;
 
+ #pragma once
+
 struct FirstLayerImpl : nn::Module {
     FirstLayerImpl(int N_Channel, int N_Input_Channel)
         : batch_norm1(N_Input_Channel),

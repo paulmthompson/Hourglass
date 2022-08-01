@@ -4,6 +4,8 @@
 
  using namespace torch;
 
+ #pragma once
+
 struct Conv0Impl : nn::Module {
     Conv0Impl(int input_dim, int output_dim, int kernel_size,int stride, int padding)
     : conv1(nn::Conv2dOptions(input_dim,output_dim,kernel_size)
