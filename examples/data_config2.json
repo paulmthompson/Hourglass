@@ -37,5 +37,14 @@
         "channels": 64,
         "input-dimensions": 1,
         "output-dimensions": 1
+    },
+    "training": {
+        "epochs": 2,
+        "batch-size": 16,
+        "save-name": "hourglass_weights.pt",
+        "load-weights": {
+            "load": true,
+            "path": "hourglass_weights.pt"
+        }
     }
 }

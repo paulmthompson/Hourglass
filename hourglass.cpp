@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
       device = torch::Device(torch::kCUDA);
     }
 
-    train_hourglass(hourglass,data_set,device);
+    train_hourglass(hourglass,data_set,device,result["data"].as<std::string>());
 
     exit(0);
   }
