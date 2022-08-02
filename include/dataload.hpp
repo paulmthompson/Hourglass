@@ -190,7 +190,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
             std::cout << "Data size is " << states_.size(0) << std::endl;
         };
         torch::data::Example<> get(size_t index) override;
-        optional<size_t> size() const override;
+        torch::optional<size_t> size() const override;
 };
 
 torch::data::Example<> MyDataset::get(size_t index)
@@ -200,4 +200,4 @@ torch::data::Example<> MyDataset::get(size_t index)
     return {states_[index], labels_[index]};
 };
 
-optional<size_t> MyDataset::size() const { return states_.size(0); }
+torch::optional<size_t> MyDataset::size() const { return states_.size(0); }

@@ -1,7 +1,7 @@
 #include <torch/torch.h>
 #include "include/hourglass.hpp"
 #include "include/dataload.hpp"
-//#include "include/training.hpp"
+#include "include/training.hpp"
 
 #include <cxxopts.hpp>
 
@@ -30,57 +30,9 @@ int main(int argc, char** argv) {
 
     auto data_set = MyDataset(result["data"].as<std::string>()).map(torch::data::transforms::Stack<>());
 
-    int batch_size = 8;
-    int kNumberOfEpochs = 2;
-
-    auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
-      std::move(data_set), 
-      batch_size);
-    
     StackedHourglass hourglass = createHourglass(result["data"].as<std::string>());
 
-    torch::optim::Adam optimizer(
-      hourglass->parameters(), torch::optim::AdamOptions(2e-4));
-
-    std::vector<float> all_losses;
-    const int64_t batches_per_epoch = std::ceil(data_set.size().value() / static_cast<double>(batch_size));
-
-    for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch) {
-    int64_t batch_index = 0;
-      for (auto& batch : *data_loader) {
-
-        hourglass->zero_grad();
-
-        auto& data = batch.data;
-        auto& labels = batch.target;
-
-        auto output = hourglass->forward(data);
-
-        std::vector<torch::Tensor> losses;
-        for (auto& level_output : output) {
-          losses.push_back(torch::mse_loss(level_output, labels));
-        }
-        torch::Tensor loss = losses[0];
-        for (int i = 1 ; i<losses.size(); i ++) {
-          //try {
-          loss += losses[i];
-          //} catch (const c10::Error& e) {
-          // std::cout << e.msg() << std::endl;
-          //}
-        }
-
-        loss.backward();
-
-        optimizer.step();
-
-        all_losses.push_back(loss.item<float>());
-
-        std::cout << "\r"
-        "[" << epoch << "/" << kNumberOfEpochs << "]" <<
-        "[" << ++batch_index << "/" << batches_per_epoch << "]" <<
-        " loss: " << loss.item<float>() << std::flush;    
-      }
-    }
+    train_hourglass(hourglass,data_set);
 
     exit(0);
   }
