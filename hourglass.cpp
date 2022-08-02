@@ -32,7 +32,13 @@ int main(int argc, char** argv) {
 
     StackedHourglass hourglass = createHourglass(result["data"].as<std::string>());
 
-    train_hourglass(hourglass,data_set);
+    torch::Device device(torch::kCPU);
+    if (torch::cuda::is_available()) {
+      std::cout << "CUDA is available! Training on GPU." << std::endl;
+      device = torch::Device(torch::kCUDA);
+    }
+
+    train_hourglass(hourglass,data_set,device);
 
     exit(0);
   }

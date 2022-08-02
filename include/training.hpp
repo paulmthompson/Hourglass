@@ -13,7 +13,9 @@ using namespace torch;
 #pragma once
 
 template <class T>
-void train_hourglass(StackedHourglass& hourglass, T& data_set) {
+void train_hourglass(StackedHourglass& hourglass, T& data_set,torch::Device device) {
+
+    hourglass->to(device);
 
     int batch_size = 8;
     int kNumberOfEpochs = 2;
@@ -35,8 +37,8 @@ void train_hourglass(StackedHourglass& hourglass, T& data_set) {
 
         hourglass->zero_grad();
 
-        auto& data = batch.data;
-        auto& labels = batch.target;
+        auto data = batch.data.to(device);
+        auto labels = batch.target.to(device);
 
         auto output = hourglass->forward(data);
 
