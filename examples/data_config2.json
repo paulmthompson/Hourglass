@@ -31,5 +31,11 @@
         ],
         "name_prefix": "w",
         "filetypes": [".png"]
+    },
+    "hourglass": {
+        "stacks": 4,
+        "channels": 64,
+        "input-dimensions": 1,
+        "output-dimensions": 1
     }
 }

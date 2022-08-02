@@ -30,5 +30,11 @@
         "names": ["."],
         "name_prefix": "scene",
         "filetypes": [".png"]
+    },
+    "hourglass": {
+        "stacks": 4,
+        "channels": 64,
+        "input-dimensions": 1,
+        "output-dimensions": 1
     }
 }

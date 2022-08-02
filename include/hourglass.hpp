@@ -1,5 +1,6 @@
 
  #include <torch/torch.h>
+ #include <nlohmann/json.hpp>
 
  #include "residual.hpp"
 
@@ -8,6 +9,7 @@
  #include <iostream>
 
  using namespace torch;
+ using json = nlohmann::json;
 
  #pragma once
 
@@ -245,3 +247,19 @@ struct StackedHourglassImpl : nn::Module {
     std::vector<Conv0> merge_preds;
 };
 TORCH_MODULE(StackedHourglass);
+
+StackedHourglass createHourglass(const std::string& config_file) {
+
+    std::ifstream f(config_file);
+    json data = json::parse(f);
+    f.close();
+
+    const int stacks = data["hourglass"]["stacks"];
+    const int channels = data["hourglass"]["channels"];
+    const int input_dimensions = data["hourglass"]["input-dimensions"];
+    const int output_dimensions = data["hourglass"]["output-dimensions"];
+
+    StackedHourglass hourglass(stacks,channels,input_dimensions,output_dimensions);
+
+    return hourglass;
+}

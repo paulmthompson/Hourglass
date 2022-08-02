@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
       std::move(data_set), 
       batch_size);
     
-    StackedHourglass hourglass(4,64,1,1);
+    StackedHourglass hourglass = createHourglass(result["data"].as<std::string>());
 
     torch::optim::Adam optimizer(
       hourglass->parameters(), torch::optim::AdamOptions(2e-4));
