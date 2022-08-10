@@ -12,7 +12,13 @@ find_package(cxxopts CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_executable(Hourglass hourglass.cpp include/hourglass.hpp include/residual.hpp include/dataload.hpp include/training.hpp)
+add_executable(Hourglass hourglass.cpp 
+  include/hourglass.hpp 
+  include/residual.hpp 
+  include/dataload.hpp 
+  include/training.hpp
+  include/augmentation.hpp
+  )
 
 if( OpenCV_FOUND )
   # Additional Include Directories

@@ -9,6 +9,8 @@
 #include <regex>
 #include <tuple>
 
+#include "augmentation.hpp"
+
 using namespace torch;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -19,8 +21,18 @@ using paths = std::vector<std::filesystem::path>;
 
 #pragma once
 
+struct img_label_pair {
+    img_label_pair() {}
+    img_label_pair(fs::path this_img, fs::path this_label) {
+        img = this_img;
+        labels.push_back(this_label);
+    }
+    fs::path img;
+    paths labels;
+};
+
 //https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
-std::optional<std::string> match_folder_in_path(const std::filesystem::path& dir_path,std::string folder_path) {
+std::optional<std::string> match_folder_in_path(const fs::path& dir_path,std::string folder_path) {
 
     for (const auto & entry : fs::directory_iterator(dir_path)) {
         if (entry.path().string().find(folder_path) != string::npos) {
@@ -65,21 +77,10 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
     return out_images;
 };
 
-//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) {
-    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
-    cv::Mat image;
-    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
+torch::Tensor convert_to_tensor(cv::Mat& image) {
 
-    if (!image.isContinuous()) {   
-        image = image.clone(); 
-    }
-
-    // (We use torch::empty here since it can be somewhat faster than `zeros` //  or `ones` since it is allowed to fill the tensor with garbage.) 
     auto tensor = torch::empty(
            { image.rows, image.cols, image.channels()},
-            // Set dtype=byte and place on CPU, you can change these to whatever   
-            // suits your use-case.   
             torch::TensorOptions()  
                .dtype(torch::kByte)   
                .device(torch::kCPU));     
@@ -88,23 +89,63 @@ torch::Tensor load_image(const std::filesystem::path& image_path, int w, int h) 
     std::memcpy(tensor.data_ptr(), reinterpret_cast<void*>(image.data), tensor.numel() * sizeof(at::kByte));
 
     return tensor.permute({2,0,1});
-};
+}
 
- //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- torch::Tensor read_images(const std::vector<std::filesystem::path>& image_paths, int w, int h) 
- {
-    std::vector<torch::Tensor> tensor;
+//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
+cv::Mat load_image(const std::filesystem::path& image_path, int w, int h) {
+    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
+    cv::Mat image;
+    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
 
-    for (auto& img_file : image_paths) {
-        tensor.push_back(load_image(img_file,w,h));
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
     }
 
+    return image;
+};
+
+std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
+
+    std::ifstream f(config_file);
+    json data = json::parse(f);
+    f.close();
+
+    std::vector<int> height_width = data[keyword]["resolution"];
+
+    return std::make_tuple(height_width[0],height_width[1]);
+};
+
+torch::Tensor make_tensor_stack(std::vector<torch::Tensor> tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
 
     return stacked.to(torch::kFloat32);
+}
+
+ //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
+ std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair> image_paths, const std::string& config_file)
+ {
+    auto [w_img, h_img] = get_width_height(config_file,"images");
+    auto [w_label, h_label] = get_width_height(config_file,"labels");
+
+    std::vector<torch::Tensor> img_tensor;
+    std::vector<torch::Tensor> label_tensor;
+
+    for (auto& this_img_label : image_paths) {
+        auto this_img = load_image(this_img_label.img,w_img,h_img);
+        auto this_label = load_image(this_img_label.labels[0],w_label,h_label);
+
+        auto [aug_img, aug_label]  = image_augmentation(this_img,this_label);
+
+        for (int i = 0; i < aug_img.size(); i++) {
+            img_tensor.push_back(convert_to_tensor(this_img));
+            label_tensor.push_back(convert_to_tensor(this_label));
+        }
+    }
+
+    return std::make_tuple(make_tensor_stack(img_tensor),make_tensor_stack(label_tensor));
  };
 
-std::tuple<paths,paths> read_json_file(const std::string& config_file) {
+std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -114,8 +155,7 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
 
     std::filesystem::path data_path = data["folder_path"];
 
-    std::vector<std::filesystem::path> img_files;
-    std::vector<std::filesystem::path> label_files; // This should be vector of vectors to account for different label sizes
+    std::vector<img_label_pair> img_label_files;
 
     for (const auto& entry : data["experiments"]) {
 
@@ -140,8 +180,7 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
             for (const auto& this_img : this_view_images) {
                 for (const auto& this_label : this_view_labels) {
                     if (this_img.name.compare(this_label.name) == 0) {
-                        img_files.push_back(this_img.path);
-                        label_files.push_back(this_label.path);
+                        img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
                         break;
                     }
                 }
@@ -150,22 +189,12 @@ std::tuple<paths,paths> read_json_file(const std::string& config_file) {
         }  
     }
 
-    std::cout << "The total number of images is " << img_files.size() << std::endl;
-    std::cout << "The total number of labels is " << label_files.size() << std::endl;
+    std::cout << "The total number of images is " << img_label_files.size() << std::endl;
 
-    return make_tuple(img_files,label_files);
+    return img_label_files;
 };
 
-std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
 
-    std::ifstream f(config_file);
-    json data = json::parse(f);
-    f.close();
-
-    std::vector<int> height_width = data[keyword]["resolution"];
-
-    return std::make_tuple(height_width[0],height_width[1]);
-};
 
  class MyDataset : public torch::data::Dataset<MyDataset>
 {
@@ -175,19 +204,15 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
     public:
         explicit MyDataset(const std::string& config_file) 
         {
-            auto [img_files, label_files] = read_json_file(config_file);
+            auto img_label_files = read_json_file(config_file);
 
-            auto [w_img, h_img] = get_width_height(config_file,"images");
+            auto [states, labels] = read_images(img_label_files, config_file);
 
-            states_ = read_images(img_files,w_img,h_img);
-            std::cout << "Images Loaded" << std::endl;
+            states_ = std::move(states);
+            labels_ = std::move(labels);
 
-            auto [w_label, h_label] = get_width_height(config_file,"labels");
-
-            labels_ = read_images(label_files,w_label,h_label);
-            std::cout << "Labels Loaded" << std::endl;
-
-            std::cout << "Data size is " << states_.size(0) << std::endl;
+            std::cout << "Image size is " << states_.size(0) << std::endl;
+            std::cout << "Label size is " << labels_.size(0) << std::endl;
         };
         torch::data::Example<> get(size_t index) override;
         torch::optional<size_t> size() const override;

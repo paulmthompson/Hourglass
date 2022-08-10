@@ -174,7 +174,7 @@ struct HourglassImpl : nn::Module {
     Residual res1, res2, res3, res4, res5, res6,res7, res8, res9;
     nn::MaxPool2d p1, p2, p3, p4;
     nn::MaxUnpool2d unpool4,unpool3,unpool2,unpool1;
-};
+}; 
 TORCH_MODULE(Hourglass);
 
 struct StackedHourglassImpl : nn::Module {
@@ -211,6 +211,7 @@ struct StackedHourglassImpl : nn::Module {
  }
 
   std::vector<torch::Tensor> forward(torch::Tensor input) {
+
    torch::Tensor x = fb(input);
 
    std::vector<torch::Tensor> temps;

@@ -50,19 +50,24 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
         }
     }
 
+    std::cout << "Beginning Training for " << kNumberOfEpochs << " Epochs" << std::endl;
+
     for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch)
     {
         int64_t batch_index = 0;
         for (auto &batch : *data_loader)
         {
-
-            hourglass->zero_grad();
+            try {
+                hourglass->zero_grad();
+            } catch (const c10::Error &e) {
+                std::cout << e.msg() << std::endl;
+            }
 
             auto data = batch.data.to(device);
             auto labels = batch.target.to(device);
 
             auto output = hourglass->forward(data);
-
+            
             std::vector<torch::Tensor> losses;
             for (auto &level_output : output)
             {
