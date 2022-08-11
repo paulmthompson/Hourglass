@@ -264,3 +264,25 @@ StackedHourglass createHourglass(const std::string& config_file) {
 
     return hourglass;
 }
+
+void load_weights(StackedHourglass& hourglass, const std::string& config_file) {
+
+  std::ifstream f(config_file);
+  json data = json::parse(f);
+  f.close();
+
+  if (data["training"]["load-weights"]["load"])
+
+    {
+        try
+        {
+            torch::load(hourglass,data["training"]["load-weights"]["path"]);
+            std::cout << "Weights loaded" << std::endl;
+        }
+        catch (const c10::Error &e)
+        {
+            std::cout << e.msg() << std::endl;
+            std::cout << "Couldn't load previous weights" << std::endl;
+        }
+    }
+}

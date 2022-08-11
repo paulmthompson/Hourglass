@@ -36,20 +36,8 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
         std::move(data_set),
         batch_size);
 
-    if (data["prediction"]["load-weights"]["load"])
-    {
-        try
-        {
-            torch::load(hourglass,data["prediction"]["load-weights"]["path"]);
-            std::cout << "Weights loaded" << std::endl;
-        }
-        catch (const c10::Error &e)
-        {
-            std::cout << e.msg() << std::endl;
-            std::cout << "Couldn't load previous weights" << std::endl;
-        }
-    }
-    
+    load_weights(hourglass,config_file);
+
     const int out_height = 256;
     const int out_width = 256;
 

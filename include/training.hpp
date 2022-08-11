@@ -52,19 +52,7 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
     torch::optim::Adam optimizer(
         hourglass->parameters(), torch::optim::AdamOptions(2e-4));
 
-    if (data["training"]["load-weights"]["load"])
-    {
-        try
-        {
-            torch::load(hourglass,data["training"]["load-weights"]["path"]);
-            std::cout << "Weights loaded" << std::endl;
-        }
-        catch (const c10::Error &e)
-        {
-            std::cout << e.msg() << std::endl;
-            std::cout << "Couldn't load previous weights" << std::endl;
-        }
-    }
+    load_weights(hourglass,config_file);
 
     std::cout << "Beginning Training for " << kNumberOfEpochs << " Epochs" << std::endl;
 
