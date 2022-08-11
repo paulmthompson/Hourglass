@@ -33,7 +33,7 @@ struct img_label_pair {
 };
 
 template<typename T>
-void shuffle(std::vector<T> imgs, std::vector<T> labels) {
+void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
 
     int n = imgs.size();
     //https://www.techiedelight.com/shuffle-vector-cpp/
