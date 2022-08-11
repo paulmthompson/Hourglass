@@ -18,6 +18,7 @@ add_executable(Hourglass hourglass.cpp
   include/dataload.hpp 
   include/training.hpp
   include/augmentation.hpp
+  include/prediction.hpp
   )
 
 if( OpenCV_FOUND )

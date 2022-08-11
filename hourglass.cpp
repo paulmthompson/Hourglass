@@ -2,6 +2,7 @@
 #include "include/hourglass.hpp"
 #include "include/dataload.hpp"
 #include "include/training.hpp"
+#include "include/prediction.hpp"
 
 #include <cxxopts.hpp>
 
@@ -16,6 +17,8 @@ int main(int argc, char** argv) {
   options.add_options()
     ("h,help", "Print usage")
     ("d,data", "Data JSON configuration file", cxxopts::value<std::string>())
+    ("t,train", "Perform training on dataset", cxxopts::value<bool>()->default_value("true"))
+    ("p,predict","Predict using trained network",cxxopts::value<bool>()->default_value("true"))
   ;
 
   auto result = options.parse(argc, argv);
@@ -34,11 +37,18 @@ int main(int argc, char** argv) {
 
     torch::Device device(torch::kCPU);
     if (torch::cuda::is_available()) {
-      std::cout << "CUDA is available! Training on GPU." << std::endl;
+      std::cout << "CUDA is available! Using the GPU." << std::endl;
       device = torch::Device(torch::kCUDA);
     }
 
-    train_hourglass(hourglass,data_set,device,result["data"].as<std::string>());
+
+    if (result["train"].as<bool>()) {
+      train_hourglass(hourglass,data_set,device,result["data"].as<std::string>());
+    }
+
+    if (result["predict"].as<bool>()) {
+      predict(hourglass,data_set,device,result["data"].as<std::string>());
+    }
 
     exit(0);
   }

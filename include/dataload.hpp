@@ -39,7 +39,7 @@ void shuffle(std::vector<T> imgs, std::vector<T> labels) {
     //https://www.techiedelight.com/shuffle-vector-cpp/
     for (int i = 0; i < n - 1; i++)
     {
-        int j = i + std::rand() % (n - i);
+        int j = i + rand() % (n - i);
         std::swap(imgs[i],imgs[j]);
         std::swap(labels[i],labels[j]);
     }
@@ -132,7 +132,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 torch::Tensor make_tensor_stack(std::vector<torch::Tensor> tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
 
-    return stacked.to(torch::kFloat32);
+    return stacked.to(torch::kFloat32).div(255);
 }
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
@@ -151,8 +151,8 @@ torch::Tensor make_tensor_stack(std::vector<torch::Tensor> tensor) {
         auto [aug_img, aug_label]  = image_augmentation(this_img,this_label);
 
         for (int i = 0; i < aug_img.size(); i++) {
-            img_tensor.push_back(convert_to_tensor(this_img));
-            label_tensor.push_back(convert_to_tensor(this_label));
+            img_tensor.push_back(convert_to_tensor(aug_img[i]));
+            label_tensor.push_back(convert_to_tensor(aug_label[i]));
         }
     }
 

@@ -17,19 +17,19 @@ using namespace cv;
 void flip_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
                 const cv::Mat& input_image, const cv::Mat& input_label, const int flip_dir) {
 
-    cv::Mat output_image = cv::Mat::zeros( input_image.size(), input_image.type() );;
-    cv::Mat output_label = cv::Mat::zeros( input_label.size(), input_label.type() );;
+    cv::Mat output_image = cv::Mat::zeros( input_image.size(), input_image.type() );
+    cv::Mat output_label = cv::Mat::zeros( input_label.size(), input_label.type() );
 
     cv::flip(input_image,output_image,flip_dir);
     cv::flip(input_label,output_label,flip_dir);
 
-    output_images.push_back(output_image);
-    output_labels.push_back(output_label);
+    output_images.push_back(std::move(output_image));
+    output_labels.push_back(std::move(output_label));
 };
 
 cv::Mat rotate_image(const cv::Mat& img, const int angle) {
 
-    cv::Mat output_img = cv::Mat::zeros( img.size(), img.type() );;
+    cv::Mat output_img = cv::Mat::zeros( img.size(), img.type() );
 
     int width = img.size().width;
     int height = img.size().height;
@@ -80,8 +80,9 @@ std::tuple<std::vector<cv::Mat>,std::vector<cv::Mat>> image_augmentation(const c
     float alpha = 1.5;
     int beta = 50;
 
-    output_images.push_back(input_image);
-    output_labels.push_back(input_label);
+    output_images.push_back(input_image.clone());
+    output_labels.push_back(input_label.clone());
+
 
     if (horizontal_flip) {
         flip_images(output_images,output_labels,input_image,input_label,0);
@@ -92,11 +93,9 @@ std::tuple<std::vector<cv::Mat>,std::vector<cv::Mat>> image_augmentation(const c
     for (auto& rotation : rotations) {
         rotate_images(output_images,output_labels,input_image,input_label,rotation);
     }
-
     if (contrast_adjustment) {
         contrast_adjust_images(output_images,output_labels,input_image,input_label,alpha,beta);
     }
-
 
     return std::make_tuple(output_images,output_labels);
 }
