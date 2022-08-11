@@ -1,6 +1,7 @@
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/opencv.hpp>
+#include <ffmpeg_wrapper/videodecoder.h>
 
 #include <string>
 #include <iostream>
@@ -31,6 +32,41 @@ struct img_label_pair {
     fs::path img;
     paths labels;
 };
+
+torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
+    auto stacked = torch::stack(torch::TensorList(tensor));
+
+    return stacked.to(torch::kFloat32).div(255);
+}
+
+torch::Tensor LoadFrame(std::unique_ptr<ffmpeg_wrapper::VideoDecoder>& vd, int frame_id) {
+
+    std::vector<uint8_t> image = vd->getFrame(frame_id, true);
+
+    const int img_height = 640;
+    const int img_width = 480;
+
+    auto tensor = torch::empty(
+           { img_height, img_width, 1},
+            torch::TensorOptions()  
+               .dtype(torch::kByte)   
+               .device(torch::kCPU));     
+               
+    // Copy over the data 
+    std::memcpy(tensor.data_ptr(), image.data(), tensor.numel() * sizeof(at::kByte));
+
+    return tensor.permute({2,0,1});
+}
+
+torch::Tensor LoadFrames(std::unique_ptr<ffmpeg_wrapper::VideoDecoder>& vd, int frame_start, int frame_end) {
+
+    std::vector<torch::Tensor> frames;
+
+    for (int i = frame_start; i <= frame_end; i++) {
+        frames.push_back(LoadFrame(vd,i));
+    }
+    return make_tensor_stack(frames);
+}
 
 template<typename T>
 void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
@@ -128,12 +164,6 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
     return std::make_tuple(height_width[0],height_width[1]);
 };
-
-torch::Tensor make_tensor_stack(std::vector<torch::Tensor> tensor) {
-    auto stacked = torch::stack(torch::TensorList(tensor));
-
-    return stacked.to(torch::kFloat32).div(255);
-}
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
  std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair> image_paths, const std::string& config_file)

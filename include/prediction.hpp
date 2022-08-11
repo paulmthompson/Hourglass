@@ -1,6 +1,7 @@
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/opencv.hpp>
+#include <ffmpeg_wrapper/videodecoder.h>
 
 #include "hourglass.hpp"
 #include "dataload.hpp"
@@ -48,7 +49,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
             std::cout << "Couldn't load previous weights" << std::endl;
         }
     }
-
+    
     const int out_height = 256;
     const int out_width = 256;
 
@@ -62,8 +63,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto output = hourglass->forward(data);
 
-        //torch::Tensor prediction = output.back();
-        torch::Tensor prediction = data;
+        torch::Tensor prediction = output.back();
 
         prediction = nn::functional::interpolate(prediction,
             nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({out_height,out_width})).mode(torch::kNearest));
@@ -76,7 +76,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto tensor_raw_data_ptr = prediction.data_ptr<uchar>();
 
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < prediction.size(3); j++) {
 
             cv::Mat resultImg(out_height,out_width,CV_8UC1, tensor_raw_data_ptr + (out_height*out_width*j));
             
@@ -84,7 +84,6 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
             cv::imwrite(img_name,resultImg);
         }
       
-
         std::cout << "\r"
                     "["
                     << (++batch_index) * batch_size << "/" << total_images << "]"

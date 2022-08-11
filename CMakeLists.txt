@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Torch REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
+find_package(ffmpeg_wrapper CONFIG REQUIRED)
 
 #Image Loading
 find_package(PNG REQUIRED)
@@ -36,7 +37,7 @@ target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
 target_link_libraries(Hourglass PRIVATE PNG::PNG)
-#target_link_libraries(Hourglass PRIVATE ${OpenCV_LIBS})
+target_link_libraries(Hourglass PRIVATE ffmpeg_wrapper::ffmpeg_wrapper)
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,
