@@ -7,11 +7,27 @@
 
 #include <vector>
 #include <cmath>
+#include <iostream>
+#include <fstream>
 
 using namespace torch;
 using json = nlohmann::json;
 
 #pragma once
+
+void write_loss(std::vector<float> loss) {
+
+    std::ofstream wf("losses.dat", std::ios::out | std::ios::binary);
+
+    if(!wf) {
+      std::cout << "Cannot open file!" << std::endl;
+   }
+
+    wf.write(reinterpret_cast<const char *>(&loss[0]),sizeof(float)*loss.size());
+
+    wf.close();
+
+};
 
 template <class T>
 void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
@@ -95,4 +111,6 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
     torch::save(hourglass, data["training"]["save-name"]);
     torch::save(optimizer, "hourglass-optimizer.pt");
+
+    write_loss(all_losses);
 }

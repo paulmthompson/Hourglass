@@ -8,6 +8,7 @@
 #include <optional>
 #include <regex>
 #include <tuple>
+#include <algorithm>
 
 #include "augmentation.hpp"
 
@@ -29,6 +30,19 @@ struct img_label_pair {
     }
     fs::path img;
     paths labels;
+};
+
+template<typename T>
+void shuffle(std::vector<T> imgs, std::vector<T> labels) {
+
+    int n = imgs.size();
+    //https://www.techiedelight.com/shuffle-vector-cpp/
+    for (int i = 0; i < n - 1; i++)
+    {
+        int j = i + std::rand() % (n - i);
+        std::swap(imgs[i],imgs[j]);
+        std::swap(labels[i],labels[j]);
+    }
 };
 
 //https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
@@ -141,6 +155,8 @@ torch::Tensor make_tensor_stack(std::vector<torch::Tensor> tensor) {
             label_tensor.push_back(convert_to_tensor(this_label));
         }
     }
+
+    shuffle(img_tensor,label_tensor);
 
     return std::make_tuple(make_tensor_stack(img_tensor),make_tensor_stack(label_tensor));
  };
