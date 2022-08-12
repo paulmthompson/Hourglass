@@ -37,7 +37,7 @@ target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
 target_link_libraries(Hourglass PRIVATE PNG::PNG)
-target_link_libraries(Hourglass PRIVATE ffmpeg_wrapper::ffmpeg_wrapper)
+target_link_libraries(Hourglass PUBLIC ffmpeg_wrapper::ffmpeg_wrapper)
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,

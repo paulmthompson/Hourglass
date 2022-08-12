@@ -29,25 +29,29 @@ int main(int argc, char** argv) {
     exit(0);
   } else if (result.count("data")) {
 
-    std::cout << "Configuration file is " << result["data"].as<std::string>() << std::endl;
+    std::string config_file = result["data"].as<std::string>();
 
-    auto data_set = MyDataset(result["data"].as<std::string>()).map(torch::data::transforms::Stack<>());
+    std::cout << "Configuration file is " << config_file << std::endl;
 
-    StackedHourglass hourglass = createHourglass(result["data"].as<std::string>());
+    StackedHourglass hourglass = createHourglass(config_file);
 
     torch::Device device(torch::kCPU);
+    /*
     if (torch::cuda::is_available()) {
       std::cout << "CUDA is available! Using the GPU." << std::endl;
       device = torch::Device(torch::kCUDA);
     }
-
+    */
 
     if (result["train"].as<bool>()) {
-      train_hourglass(hourglass,data_set,device,result["data"].as<std::string>());
+      auto data_set = MyDataset(config_file).map(torch::data::transforms::Stack<>());
+      train_hourglass(hourglass,data_set,device,config_file);
     }
 
     if (result["predict"].as<bool>()) {
-      predict(hourglass,data_set,device,result["data"].as<std::string>());
+      //auto data_set = MyDataset(config_file).map(torch::data::transforms::Stack<>());
+      //predict(hourglass,data_set,device,config_file);
+      predict_video(hourglass,device,config_file);
     }
 
     exit(0);
