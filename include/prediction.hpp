@@ -67,7 +67,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
-        auto tensor_raw_data_ptr = prediction.data_ptr<uchar>();
+        auto tensor_raw_data_ptr = prediction.data_ptr();
 
         for (int j = 0; j < prediction.size(3); j++) {
 
@@ -90,7 +90,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << std::endl;
     std::cout << total_images << " images predicted in " << elapsed.count() << " seconds" << std::endl;
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
-}
+};
 
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
@@ -99,31 +99,40 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     json data = json::parse(f);
     f.close();
     
-    //hourglass->to(device);
+    hourglass->to(device);
     std::cout << data["prediction"]["videos"] << std::endl;
-    ffmpeg_wrapper::VideoDecoder vd = ffmpeg_wrapper::VideoDecoder(data["prediction"]["videos"]);
 
-    //auto vd = std::make_unique<ffmpeg_wrapper::VideoDecoder>();
+    auto vd = ffmpeg_wrapper::VideoDecoder();
     
-    /*
-    vd->createMedia(data["prediction"]["videos"]);
-    const int64_t total_images = vd->getFrameCount();
+    std::string vid_name = data["prediction"]["videos"];
+    vd.createMedia(vid_name);
+    const int64_t total_images = vd.getFrameCount();
+
+    std::cout << "Video loaded with " << total_images << " frames" << std::endl;
     int batch_size = data["prediction"]["batch-size"];
     const int64_t batches_per_epoch = std::ceil(total_images / static_cast<double>(batch_size));
     
     load_weights(hourglass,config_file);
 
-    const int out_height = vd->getHeight();
-    const int out_width = vd->getWidth();
+    const int out_height = vd.getHeight();
+    const int out_width = vd.getWidth();
 
     auto start = std::chrono::high_resolution_clock::now();
+
+    std::vector<uint8_t> image = vd.getFrame(0, true);
 
     int64_t batch_index = 0;
     int64_t frame_index = 0;
     while (frame_index < total_images)
     {
-        int last_index = (frame_index + batches_per_epoch -1 < total_images) ? frame_index + batches_per_epoch - 1 : total_images -1;
+        int last_index = frame_index + batch_size - 1;
+        last_index = (last_index < total_images) ? last_index : total_images -1;
         auto data = LoadFrames(vd,frame_index,last_index);
+
+        data = data.to(device);
+
+        data = nn::functional::interpolate(data,
+            nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({256,256})).mode(torch::kNearest));
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
@@ -142,5 +151,5 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::cout << std::endl;
     std::cout << total_images << " images predicted in " << elapsed.count() << " seconds" << std::endl;
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
-    */
+
 }

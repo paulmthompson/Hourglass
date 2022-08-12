@@ -36,12 +36,10 @@ int main(int argc, char** argv) {
     StackedHourglass hourglass = createHourglass(config_file);
 
     torch::Device device(torch::kCPU);
-    /*
     if (torch::cuda::is_available()) {
       std::cout << "CUDA is available! Using the GPU." << std::endl;
       device = torch::Device(torch::kCUDA);
     }
-    */
 
     if (result["train"].as<bool>()) {
       auto data_set = MyDataset(config_file).map(torch::data::transforms::Stack<>());
