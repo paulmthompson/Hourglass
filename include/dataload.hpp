@@ -117,7 +117,7 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
     std::regex image_regex(json_prefix);
     for (const auto & file_type : json_filetypes) {
         for (const auto & entry : fs::directory_iterator(folder_path)) {
-            if (entry.path().extension() == file_type) {
+            if (entry.path().extension() == file_type.get<std::string>()) {
                 std::filesystem::path image_file_path = folder_path / entry.path();
                 std::string image_name = std::regex_replace(entry.path().stem().string(), image_regex, "");
                 out_images.push_back(name_and_path{image_name,image_file_path});
