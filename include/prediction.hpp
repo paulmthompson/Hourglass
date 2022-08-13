@@ -103,7 +103,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::cout << data["prediction"]["videos"] << std::endl;
 
     auto vd = ffmpeg_wrapper::VideoDecoder();
-    
+     
     std::string vid_name = data["prediction"]["videos"];
     vd.createMedia(vid_name);
     const int64_t total_images = vd.getFrameCount();
@@ -142,7 +142,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                     "["
                     << (++batch_index) * batch_size << "/" << total_images << "]"
                     << " Predicted" << std::flush;
-        frame_index = frame_index + batch_size - 1;
+        frame_index = frame_index + batch_size;
     }
 
     auto t1 = std::chrono::high_resolution_clock::now();
