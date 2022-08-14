@@ -49,8 +49,12 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
     std::vector<float> all_losses;
 
+    float learning_rate = 2e-4;
+    if (data["training"].contains("learning-rate")) {
+        learning_rate = data["training"]["learning-rate"];
+    }
     torch::optim::Adam optimizer(
-        hourglass->parameters(), torch::optim::AdamOptions(2e-4));
+        hourglass->parameters(), torch::optim::AdamOptions(learning_rate));
 
     load_weights(hourglass,config_file);
 

@@ -209,7 +209,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
     for (const auto& entry : data["experiments"]) {
 
-        auto experiment_path = data_path / entry["name"];
+        auto experiment_path = data_path / entry;
 
         std::cout << "Loading experiment path: " << experiment_path << std::endl;
 

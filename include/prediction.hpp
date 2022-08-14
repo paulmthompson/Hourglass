@@ -48,27 +48,6 @@ cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
 
     cv::addWeighted(channel[0],0.5, label,0.5,0.0,channel[0]);
 
-    /*
-    for (int i=0; i< color_img.rows; i++) {
-        for (int j = 0; j< color_img.cols; j++) {
-
-            float label_val = label.at<uint8_t>(i,j) / 255;
-
-            uint8_t & red = channel[0].at<uint8_t>(i,j);
-            uint8_t & green = channel[1].at<uint8_t>(i,j);
-            uint8_t & blue = channel[2].at<uint8_t>(i,j);
-
-            red = (uint8_t) (label_val * 255);
-            //red = label_val + red * (255-label_val);
-            //green = green * (255 - label_val);
-            //blue = blue * (255 - label_val);
-
-            channel[0].at<uint8_t>(i,j) = red;
-            channel[1].at<uint8_t>(i,j) = green;
-            channel[2].at<uint8_t>(i,j) = blue;
-        }
-    }
-    */
     cv::merge(channel,3,color_img);
     return color_img;
 }
@@ -191,18 +170,18 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         auto data_raw_data_ptr = data.data_ptr<uchar>();
         
-        /*
+
         for (int j = 0; j < prediction.size(3); j++) {
 
             cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
             cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
 
-            resultImg = combine_overlay(realImg,resultImg);
+            //resultImg = combine_overlay(realImg,resultImg);
             
             std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
             cv::imwrite(img_name,resultImg);
         }
-        */
+
         
         std::cout << "\r"
                     "["
