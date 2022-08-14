@@ -18,20 +18,58 @@ using json = nlohmann::json;
 
 #pragma once
 
+torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
-torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor data,const int height, const int width) {
+    tensor = nn::functional::interpolate(tensor,
+        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kNearest));
+
+    tensor = tensor.mul(255).clamp(0,255).to(torch::kU8);
+
+    tensor = tensor.detach().permute({2,3,1,0});
+        
+    return tensor.to(kCPU);
+}
+
+torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
     auto output = hourglass->forward(data);
 
     torch::Tensor prediction = output.back();
-
-    prediction = nn::functional::interpolate(prediction,
-        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kNearest));
         
-    prediction = prediction.mul(255).clamp(0,255).to(torch::kU8);
+    return prepare_for_opencv(prediction,height, width);
+}
 
-    prediction = prediction.detach().permute({2,3,1,0});
-        
-    return prediction.to(kCPU);
+cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
+    cv::Mat color_img;
+    cv::Mat channel[3];
+    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
+
+    cv::split(color_img,channel);
+
+    cv::addWeighted(channel[1],0.5, label,0.5,0.0,channel[1]);
+
+    /*
+    for (int i=0; i< color_img.rows; i++) {
+        for (int j = 0; j< color_img.cols; j++) {
+
+            float label_val = label.at<uint8_t>(i,j) / 255;
+
+            uint8_t & red = channel[0].at<uint8_t>(i,j);
+            uint8_t & green = channel[1].at<uint8_t>(i,j);
+            uint8_t & blue = channel[2].at<uint8_t>(i,j);
+
+            red = (uint8_t) (label_val * 255);
+            //red = label_val + red * (255-label_val);
+            //green = green * (255 - label_val);
+            //blue = blue * (255 - label_val);
+
+            channel[0].at<uint8_t>(i,j) = red;
+            channel[1].at<uint8_t>(i,j) = green;
+            channel[2].at<uint8_t>(i,j) = blue;
+        }
+    }
+    */
+    cv::merge(channel,3,color_img);
+    return color_img;
 }
 
 template <class T>
@@ -136,8 +174,23 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
-        auto tensor_raw_data_ptr = prediction.data_ptr<uchar>();
-      
+        auto prediction_raw_data_ptr = prediction.data_ptr<uchar>();
+
+        data = prepare_for_opencv(data,out_height,out_width);
+
+        auto data_raw_data_ptr = data.data_ptr<uchar>();
+        
+        for (int j = 0; j < prediction.size(3); j++) {
+
+            cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
+            cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
+
+            resultImg = combine_overlay(realImg,resultImg);
+            
+            std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
+            cv::imwrite(img_name,resultImg);
+        }
+        
         std::cout << "\r"
                     "["
                     << (++batch_index) * batch_size << "/" << total_images << "]"
