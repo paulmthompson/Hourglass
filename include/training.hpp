@@ -105,4 +105,5 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
     torch::save(optimizer, "hourglass-optimizer.pt");
 
     write_loss(all_losses);
+
 }

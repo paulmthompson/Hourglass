@@ -63,7 +63,7 @@ void contrast_adjust_images(std::vector<cv::Mat>& output_images, std::vector<cv:
                 const cv::Mat& input_image, const cv::Mat& input_label, const float alpha, const int beta) {
     
     output_images.push_back(contrast_adjust(input_image,alpha,beta));
-    output_labels.push_back(contrast_adjust(input_label,alpha,beta));
+    output_labels.push_back(input_label.clone());
 };
 
 std::tuple<std::vector<cv::Mat>,std::vector<cv::Mat>> image_augmentation(const cv::Mat& input_image,const cv::Mat& input_label) {
