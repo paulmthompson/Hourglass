@@ -42,11 +42,14 @@ torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tens
 cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
     cv::Mat color_img;
     cv::Mat channel[3];
+    cv::Mat dst;
     cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
 
     cv::split(color_img,channel);
 
-    cv::addWeighted(channel[0],0.5, label,0.5,0.0,channel[0]);
+    cv::addWeighted(channel[2],0.5, label,0.5,0.0,dst);
+
+    channel[2] = dst;
 
     cv::merge(channel,3,color_img);
     return color_img;
@@ -87,10 +90,17 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto tensor_raw_data_ptr = prediction.data_ptr();
 
+        data = prepare_for_opencv(data,out_height,out_width);
+
+        auto data_raw_data_ptr = data.data_ptr();
+
         for (int j = 0; j < prediction.size(3); j++) {
 
             cv::Mat resultImg(out_height,out_width,CV_8UC1, tensor_raw_data_ptr + (out_height*out_width*j));
-            
+            cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
+
+            resultImg = combine_overlay(realImg,resultImg);
+
             std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
             cv::imwrite(img_name,resultImg);
         }
@@ -176,7 +186,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
             cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
             cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
 
-            //resultImg = combine_overlay(realImg,resultImg);
+            resultImg = combine_overlay(realImg,resultImg);
             
             std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
             cv::imwrite(img_name,resultImg);
