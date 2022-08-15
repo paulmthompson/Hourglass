@@ -38,21 +38,28 @@ torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tens
         
     return prepare_for_opencv(prediction,height, width);
 }
-
+//This isn't quite right because I need to scale the other pixels 
 cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
+    
     cv::Mat color_img;
+    cv::Mat color_label;
+
     cv::Mat channel[3];
     cv::Mat dst;
+
     cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
+    cv::cvtColor(label,color_label,cv::COLOR_GRAY2RGB);
 
-    cv::split(color_img,channel);
+    cv::split(color_label,channel);
 
-    cv::addWeighted(channel[2],0.5, label,0.5,0.0,dst);
+    channel[0] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
+    channel[1] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
 
-    channel[2] = dst;
+    cv::merge(channel,3,color_label);
 
-    cv::merge(channel,3,color_img);
-    return color_img;
+    cv::addWeighted(color_label,0.5, color_img,0.5,0.0,dst);
+
+    return dst;
 }
 
 template <class T>
