@@ -19,6 +19,13 @@ using json = nlohmann::json;
 
 #pragma once
 
+struct save_structure {
+    std::vector<int> frame;
+    std::vector<std::vector<int>> x_pos;
+    std::vector<std::vector<int>> y_pos;
+    std::vector<std::vector<float>> prob;
+};
+
 torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
     tensor = nn::functional::interpolate(tensor,
@@ -127,6 +134,13 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
 };
 
+void get_data_to_save(torch::Tensor& pred, save_structure& save) {
+
+    for (int j = 0; j < pred.size(3); j++) {
+        
+    }
+};
+
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
 
@@ -158,6 +172,8 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     const int64_t batches_per_epoch = std::ceil(total_images / static_cast<double>(batch_size));
     
     load_weights(hourglass,config_file);
+
+    auto save_output = save_structure();
 
     const int out_height = vd.getHeight();
     const int out_width = vd.getWidth();
@@ -195,7 +211,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
             resultImg = combine_overlay(realImg,resultImg);
             
-            std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
+            std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
             cv::imwrite(img_name,resultImg);
         }
 
