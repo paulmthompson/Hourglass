@@ -99,6 +99,12 @@ private:
 
         return item_type;
     }
+    template<>
+    H5::FloatType get_hdf5_type<uint16_t>() {
+        H5::FloatType item_type(H5::PredType::STD_U16LE);
+
+        return item_type;
+    }
 
     template <typename T>
     void write_var_length_array(H5::H5File file,std::string& dataset_name,std::vector<std::vector<T>>& input_data) {
@@ -126,8 +132,8 @@ private:
     }
 
     std::vector<int> frame;
-    std::vector<std::vector<int>> x_pos;
-    std::vector<std::vector<int>> y_pos;
+    std::vector<std::vector<uint16_t>> x_pos;
+    std::vector<std::vector<uint16_t>> y_pos;
     std::vector<std::vector<float>> prob;
     int x_dim;
     int y_dim;

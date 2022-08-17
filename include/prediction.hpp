@@ -137,7 +137,7 @@ void get_data_to_save(torch::Tensor& pred, save_structure& save,const int frame_
         auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),torch::indexing::Slice(),j});
 
         if (torch::any(my_slice.greater(thres)).item().toBool()) {
-            std::cout << "Tongue detected at " << frame_index + j << std::endl;
+            //std::cout << "Tongue detected at " << frame_index + j << std::endl;
             save.save_frame(my_slice,frame_index + j,thres);
         }
     }
@@ -159,14 +159,29 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::string vid_name = data["prediction"]["videos"];
     vd.createMedia(vid_name);
     int64_t total_images = vd.getFrameCount();
-    int64_t frame_index = 0;
+    int64_t starting_frame = 0;
+    
+    bool save_images = false;
+    bool save_hdf5 = true;
+
+    std::filesystem::path vid_path = vid_name;
+    std::string output_save_path = vid_path.stem().string() + ".h5";
 
     if (data["prediction"].contains("start_frame")) {
-        frame_index = data["prediction"]["start_frame"];
+        starting_frame = data["prediction"]["start_frame"];
     }
 
     if (data["prediction"].contains("end_frame")) {
         total_images = data["prediction"]["end_frame"];
+    }
+    if (data["prediction"].contains("save_images")) {
+        save_images = data["prediction"]["save_images"];
+    }
+    if (data["prediction"].contains("output_file_path")) {
+        output_save_path = data["prediction"]["output_file_path"];
+    }
+    if (data["prediction"].contains("save_hdf5")) {
+        save_hdf5 = data["prediction"]["save_hdf5"];
     }
 
     std::cout << "Video loaded with " << total_images << " frames" << std::endl;
@@ -185,6 +200,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::vector<uint8_t> image = vd.getFrame(0);
 
     int64_t batch_index = 0;
+    int64_t frame_index = starting_frame;
     
     while (frame_index < total_images)
     {
@@ -201,39 +217,44 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         auto prediction_raw_data_ptr = prediction.data_ptr<uchar>();
 
-        data = prepare_for_opencv(data,out_height,out_width);
-
-        auto data_raw_data_ptr = data.data_ptr<uchar>();
-        
-
-        get_data_to_save(prediction,save_output,frame_index);
-
-        for (int j = 0; j < prediction.size(3); j++) {
-
-            cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
-            cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
-
-            resultImg = combine_overlay(realImg,resultImg);
-            
-            std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
-            cv::imwrite(img_name,resultImg);
+        if (save_hdf5) {
+            get_data_to_save(prediction,save_output,frame_index);
         }
+
+        if (save_images) {
+
+            data = prepare_for_opencv(data,out_height,out_width);
+
+            auto data_raw_data_ptr = data.data_ptr<uchar>();
+
+            for (int j = 0; j < prediction.size(3); j++) {
+
+                cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
+                cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
+
+                resultImg = combine_overlay(realImg,resultImg);
+            
+                std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                cv::imwrite(img_name,resultImg);
+            }
+        }
+        
         
         std::cout << "\r"
                     "["
-                    << (++batch_index) * batch_size << "/" << total_images << "]"
+                    << (++batch_index) * batch_size << "/" << total_images - starting_frame << "]"
                     << " Predicted" << std::flush;
         frame_index = frame_index + batch_size;
     }
 
-    std::string output_save_path = "example.h5";
-    save_output.write(output_save_path);
+    std::cout << std::endl;
+    save_output.write(output_save_path); // This should be done more frequently to ensure that RAM doesn't disappear.
 
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t1 - start;
 
     std::cout << std::endl;
     std::cout << total_images - frame_index << " images predicted in " << elapsed.count() << " seconds" << std::endl;
-    std::cout << "Average " << (total_images - frame_index) / elapsed.count() << " images per second" << std::endl;
+    std::cout << "Average " << (total_images - starting_frame) / elapsed.count() << " images per second" << std::endl;
 
 }
