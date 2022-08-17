@@ -6,6 +6,7 @@
 
 #include "hourglass.hpp"
 #include "dataload.hpp"
+#include "saveload.hpp"
 
 #include <vector>
 #include <cmath>
@@ -18,13 +19,6 @@ using namespace torch;
 using json = nlohmann::json;
 
 #pragma once
-
-struct save_structure {
-    std::vector<int> frame;
-    std::vector<std::vector<int>> x_pos;
-    std::vector<std::vector<int>> y_pos;
-    std::vector<std::vector<float>> prob;
-};
 
 torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
@@ -102,11 +96,11 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
-        auto tensor_raw_data_ptr = prediction.data_ptr();
+        auto tensor_raw_data_ptr = prediction.data_ptr<uchar>();
 
         data = prepare_for_opencv(data,out_height,out_width);
 
-        auto data_raw_data_ptr = data.data_ptr();
+        auto data_raw_data_ptr = data.data_ptr<uchar>();
 
         for (int j = 0; j < prediction.size(3); j++) {
 
@@ -134,10 +128,18 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
 };
 
-void get_data_to_save(torch::Tensor& pred, save_structure& save) {
+void get_data_to_save(torch::Tensor& pred, save_structure& save,const int frame_index) {
+
+    float thres = 0.1 * 255;
 
     for (int j = 0; j < pred.size(3); j++) {
-        
+
+        auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),torch::indexing::Slice(),j});
+
+        if (torch::any(my_slice.greater(thres)).item().toBool()) {
+            std::cout << "Tongue detected at " << frame_index + j << std::endl;
+            save.save_frame(my_slice,frame_index + j,thres);
+        }
     }
 };
 
@@ -173,10 +175,10 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     
     load_weights(hourglass,config_file);
 
-    auto save_output = save_structure();
-
     const int out_height = vd.getHeight();
     const int out_width = vd.getWidth();
+
+    auto save_output = save_structure(out_height,out_width);
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -204,6 +206,8 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
         auto data_raw_data_ptr = data.data_ptr<uchar>();
         
 
+        get_data_to_save(prediction,save_output,frame_index);
+
         for (int j = 0; j < prediction.size(3); j++) {
 
             cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
@@ -214,7 +218,6 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
             std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
             cv::imwrite(img_name,resultImg);
         }
-
         
         std::cout << "\r"
                     "["
@@ -222,6 +225,9 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                     << " Predicted" << std::flush;
         frame_index = frame_index + batch_size;
     }
+
+    std::string output_save_path = "example.h5";
+    save_output.write(output_save_path);
 
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t1 - start;

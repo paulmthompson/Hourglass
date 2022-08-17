@@ -8,6 +8,8 @@ find_package(Torch REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
 find_package(ffmpeg_wrapper CONFIG REQUIRED)
+find_package(HighFive CONFIG REQUIRED)
+find_package(hdf5 CONFIG REQUIRED)
 
 #Image Loading
 find_package(PNG REQUIRED)
@@ -20,6 +22,7 @@ add_executable(Hourglass hourglass.cpp
   include/training.hpp
   include/augmentation.hpp
   include/prediction.hpp
+  include/saveload.hpp
   )
 
 if( OpenCV_FOUND )
@@ -38,6 +41,9 @@ target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
 target_link_libraries(Hourglass PRIVATE PNG::PNG)
 target_link_libraries(Hourglass PUBLIC ffmpeg_wrapper::ffmpeg_wrapper)
+target_link_libraries(Hourglass PRIVATE HighFive)
+target_link_libraries(Hourglass PRIVATE hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared hdf5::hdf5_hl_cpp-shared)
+
 
 # The following code block is suggested to be used on Windows.
 # According to https://github.com/pytorch/pytorch/issues/25457,
