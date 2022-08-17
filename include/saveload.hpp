@@ -87,24 +87,6 @@ private:
 
         return item_type;
     }
-    template<>
-    H5::FloatType get_hdf5_type<float>() {
-        H5::FloatType item_type(H5::PredType::IEEE_F32LE);
-
-        return item_type;
-    }
-    template<>
-    H5::FloatType get_hdf5_type<int>() {
-        H5::FloatType item_type(H5::PredType::STD_I32LE);
-
-        return item_type;
-    }
-    template<>
-    H5::FloatType get_hdf5_type<uint16_t>() {
-        H5::FloatType item_type(H5::PredType::STD_U16LE);
-
-        return item_type;
-    }
 
     template <typename T>
     void write_var_length_array(H5::H5File file,std::string& dataset_name,std::vector<std::vector<T>>& input_data) {
@@ -141,3 +123,19 @@ private:
     // https://github.com/BlueBrain/HighFive/pull/578
     // Cannot have file member
 };
+
+template<> inline H5::FloatType save_structure::get_hdf5_type<float>() {
+    H5::FloatType item_type(H5::PredType::IEEE_F32LE);
+
+    return item_type;
+};
+template<> inline H5::FloatType save_structure::get_hdf5_type<int>() {
+    H5::FloatType item_type(H5::PredType::STD_I32LE);
+
+    return item_type;
+};
+template<> inline H5::FloatType save_structure::get_hdf5_type<uint16_t>() {
+    H5::FloatType item_type(H5::PredType::STD_U16LE);
+
+    return item_type;
+}
