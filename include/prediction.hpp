@@ -70,11 +70,30 @@ public:
         json data = json::parse(f);
         f.close();
 
-        std::cout << data["prediction"]["videos"] << std::endl;
-
         this->vid_name = data["prediction"]["videos"];
+        std::cout << this->vid_name << std::endl;
+
+        this->save_images = false;
+        if (data["prediction"].contains("save_images")) {
+            this->save_images = data["prediction"]["save_images"];
+        }
+
+        this->save_hdf5 = true;
+        if (data["prediction"].contains("save_hdf5")) {
+            this->save_hdf5 = data["prediction"]["save_hdf5"];
+        }
+
+        std::filesystem::path vid_path = this->vid_name;
+        this->output_save_path = vid_path.stem().string() + ".h5";
+        if (data["prediction"].contains("output_file_path")) {
+            this->output_save_path = data["prediction"]["output_file_path"];
+        }
+        
     }
     std::string vid_name;
+    bool save_images;
+    bool save_hdf5 = true;
+    std::string output_save_path;
 private:
     
 };
@@ -176,12 +195,6 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     vd.createMedia(options.vid_name);
     int64_t total_images = vd.getFrameCount();
     int64_t starting_frame = 0;
-    
-    bool save_images = false;
-    bool save_hdf5 = true;
-
-    std::filesystem::path vid_path = options.vid_name;
-    std::string output_save_path = vid_path.stem().string() + ".h5";
 
     if (data["prediction"].contains("start_frame")) {
         starting_frame = data["prediction"]["start_frame"];
@@ -191,15 +204,6 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
         if (data["prediction"]["end_frame"] <= total_images) {
             total_images = data["prediction"]["end_frame"];
         }
-    }
-    if (data["prediction"].contains("save_images")) {
-        save_images = data["prediction"]["save_images"];
-    }
-    if (data["prediction"].contains("output_file_path")) {
-        output_save_path = data["prediction"]["output_file_path"];
-    }
-    if (data["prediction"].contains("save_hdf5")) {
-        save_hdf5 = data["prediction"]["save_hdf5"];
     }
 
     std::cout << "Video loaded with " << total_images << " frames" << std::endl;
@@ -235,11 +239,11 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         auto prediction_raw_data_ptr = prediction.data_ptr<uchar>();
 
-        if (save_hdf5) {
+        if (options.save_hdf5) {
             get_data_to_save(prediction,save_output,frame_index);
         }
 
-        if (save_images) {
+        if (options.save_images) {
 
             data = prepare_for_opencv(data,out_height,out_width);
 
@@ -266,7 +270,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     }
 
     std::cout << std::endl;
-    save_output.write(output_save_path); // This should be done more frequently to ensure that RAM doesn't disappear.
+    save_output.write(options.output_save_path); // This should be done more frequently to ensure that RAM doesn't disappear.
 
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t1 - start;
