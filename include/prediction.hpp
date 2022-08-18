@@ -63,6 +63,22 @@ cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
     return dst;
 }
 
+class prediction_options {
+public:
+    prediction_options(const std::string& config_file) {
+        std::ifstream f(config_file);
+        json data = json::parse(f);
+        f.close();
+
+        std::cout << data["prediction"]["videos"] << std::endl;
+
+        this->vid_name = data["prediction"]["videos"];
+    }
+    std::string vid_name;
+private:
+    
+};
+
 template <class T>
 void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
 {
@@ -149,22 +165,22 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::ifstream f(config_file);
     json data = json::parse(f);
     f.close();
+
+    auto options = prediction_options(config_file);
     
     hourglass->to(device);
-    std::cout << data["prediction"]["videos"] << std::endl;
 
     auto vd = ffmpeg_wrapper::VideoDecoder();
     //auto ve = ffmpeg_wrapper::VideoEncoder();
      
-    std::string vid_name = data["prediction"]["videos"];
-    vd.createMedia(vid_name);
+    vd.createMedia(options.vid_name);
     int64_t total_images = vd.getFrameCount();
     int64_t starting_frame = 0;
     
     bool save_images = false;
     bool save_hdf5 = true;
 
-    std::filesystem::path vid_path = vid_name;
+    std::filesystem::path vid_path = options.vid_name;
     std::string output_save_path = vid_path.stem().string() + ".h5";
 
     if (data["prediction"].contains("start_frame")) {
