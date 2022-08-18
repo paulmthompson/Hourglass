@@ -256,7 +256,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     std::chrono::duration<double> elapsed = t1 - start;
 
     std::cout << std::endl;
-    std::cout << total_images - frame_index << " images predicted in " << elapsed.count() << " seconds" << std::endl;
+    std::cout << total_images - starting_frame << " images predicted in " << elapsed.count() << " seconds" << std::endl;
     std::cout << "Average " << (total_images - starting_frame) / elapsed.count() << " images per second" << std::endl;
 
 }
