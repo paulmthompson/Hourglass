@@ -89,7 +89,7 @@ private:
     }
 
     template <typename T>
-    void write_var_length_array(H5::H5File file,std::string& dataset_name,std::vector<std::vector<T>>& input_data) {
+    void write_var_length_array(H5::H5File file,const std::string& dataset_name,std::vector<std::vector<T>>& input_data) {
 
         const hsize_t n_dims = 1;
         const hsize_t n_rows = input_data.size();

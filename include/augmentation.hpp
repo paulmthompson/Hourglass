@@ -74,7 +74,7 @@ cv::Mat horizontal_shift_image(const cv::Mat& image, const float ratio) {
     const int width = image.size().width;
     const int height = image.size().height;
 
-    int to_shift = width * ratio;
+    float to_shift = static_cast<float>(width) * ratio;
 
     float warp_values[] = {1.0, 0.0, to_shift, 0.0, 1.0, 0.0};
     cv::Mat M = cv::Mat(2,3,CV_32F,warp_values);

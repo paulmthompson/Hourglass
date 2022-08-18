@@ -96,11 +96,11 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
-        auto tensor_raw_data_ptr = prediction.data_ptr<uchar>();
+        auto tensor_raw_data_ptr = prediction.template data_ptr<uchar>();
 
         data = prepare_for_opencv(data,out_height,out_width);
 
-        auto data_raw_data_ptr = data.data_ptr<uchar>();
+        auto data_raw_data_ptr = data. template data_ptr<uchar>();
 
         for (int j = 0; j < prediction.size(3); j++) {
 
