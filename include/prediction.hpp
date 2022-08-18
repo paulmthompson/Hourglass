@@ -172,7 +172,9 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     }
 
     if (data["prediction"].contains("end_frame")) {
-        total_images = data["prediction"]["end_frame"];
+        if (data["prediction"]["end_frame"] <= total_images) {
+            total_images = data["prediction"]["end_frame"];
+        }
     }
     if (data["prediction"].contains("save_images")) {
         save_images = data["prediction"]["save_images"];
