@@ -18,6 +18,8 @@ Libtorch (https://pytorch.org/get-started/locally/)
 I use VCPKG to install the other dependencies which are  
 * nlohmann_json (https://github.com/nlohmann/json)  
 * cxxopts (https://github.com/jarro2783/cxxopts)  
-* OpenCV (https://opencv.org/)  
+* OpenCV (https://opencv.org/) 
+* HighFive (https://github.com/BlueBrain/HighFive)
+* hdf5[cpp] (http://davis.lbl.gov/Manuals/HDF5-1.8.7/cpplus_RM/index.html) 
   
 ## Usage
