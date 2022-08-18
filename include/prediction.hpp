@@ -35,6 +35,7 @@ torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const in
 torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
     auto output = hourglass->forward(data);
 
+
     torch::Tensor prediction = output.back();
         
     return prepare_for_opencv(prediction,height, width);
@@ -139,6 +140,7 @@ private:
 template <class T>
 void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
 {
+    torch::NoGradGuard no_grad; // Turn off autograd for inference
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -218,6 +220,7 @@ void get_data_to_save(torch::Tensor& pred, save_structure& save,const int frame_
 
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
+    torch::NoGradGuard no_grad; // Turn off autograd for inference
 
     auto options = prediction_options(config_file);
     
