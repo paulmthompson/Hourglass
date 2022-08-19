@@ -41,7 +41,7 @@ torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tens
     return prepare_for_opencv(prediction,height, width);
 }
 //This isn't quite right because I need to scale the other pixels 
-cv::Mat combine_overlay(cv::Mat& img, cv::Mat& label) {
+cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
     
     cv::Mat color_img;
     cv::Mat color_label;
@@ -83,12 +83,19 @@ public:
         if (data["prediction"].contains("save_hdf5")) {
             this->save_hdf5 = data["prediction"]["save_hdf5"];
         }
-
+        
+        this->save_video = true;
+        if (data["prediction"].contains("save_video")) {
+            this->save_video = data["prediction"]["save_video"];
+        }
+        
         std::filesystem::path vid_path = this->vid_name;
         this->output_save_path = vid_path.stem().string() + ".h5";
         if (data["prediction"].contains("output_file_path")) {
             this->output_save_path = data["prediction"]["output_file_path"];
         }
+
+        this->output_video_name = "./" + vid_path.stem().string() + "_labeled.mp4";
 
         this->starting_frame = 1;
         if (data["prediction"].contains("start_frame")) {
@@ -109,10 +116,9 @@ public:
             this->total_images = data["prediction"]["end_frame"];
         }
 
-
     }
 
-    void update_total_images(int num) {
+    void update_total_images(const int num) {
         if (this->total_images == 0) {
             std::cout << "No ending frame specified, so analyzing to the end of the video" << std::endl;
             this->total_images = num;
@@ -128,8 +134,10 @@ public:
     }
     std::string vid_name;
     bool save_images;
-    bool save_hdf5 = true;
+    bool save_hdf5;
+    bool save_video;
     std::string output_save_path;
+    std::string output_video_name;
     int64_t starting_frame;
     int batch_size;
     int64_t total_images;
@@ -203,7 +211,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
 };
 
-void get_data_to_save(torch::Tensor& pred, save_structure& save,const int frame_index) {
+void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int frame_index) {
 
     float thres = 0.1 * 255;
 
@@ -227,7 +235,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     hourglass->to(device);
 
     auto vd = ffmpeg_wrapper::VideoDecoder();
-    //auto ve = ffmpeg_wrapper::VideoEncoder();
+    auto ve = ffmpeg_wrapper::VideoEncoder();
      
     vd.createMedia(options.vid_name);
     options.update_total_images(vd.getFrameCount());
@@ -238,6 +246,14 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
     const int out_height = vd.getHeight();
     const int out_width = vd.getWidth();
+
+    auto save_frame = std::vector<uint32_t>(out_height * out_width,0);
+    if (options.save_video) {
+        ve.setSavePath(options.output_video_name); // This makes it fail? Not making a good enough save name somehow
+        ve.createContext(out_width,out_height,25);
+        ve.set_pixel_format(ffmpeg_wrapper::VideoEncoder::INPUT_PIXEL_FORMAT::RGB0);
+        ve.openFile();
+    }
 
     auto save_output = save_structure(out_height,out_width);
 
@@ -267,7 +283,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
             get_data_to_save(prediction,save_output,frame_index);
         }
 
-        if (options.save_images) {
+        if (options.save_images | options.save_video) {
 
             data = prepare_for_opencv(data,out_height,out_width);
 
@@ -278,19 +294,33 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                 cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
                 cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
 
-                resultImg = combine_overlay(realImg,resultImg);
+                cv::Mat overlayImg = combine_overlay(realImg,resultImg);
             
-                std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
-                cv::imwrite(img_name,resultImg);
+                if (options.save_images) {
+
+                    std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                    cv::imwrite(img_name,overlayImg);
+                    
+                } else if (options.save_video) {
+
+                    cv::Mat overlayImg2;
+                    cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
+                    std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
+                    ve.writeFrameRGB0(save_frame);
+
+                }
             }
         }
-        
-        
+          
         std::cout << "\r"
                     "["
                     << (++batch_index) * options.batch_size << "/" << options.get_total_images() << "]"
                     << " Predicted" << std::flush;
         frame_index = frame_index + options.batch_size;
+    }
+
+    if (options.save_video) {
+        ve.closeFile();
     }
 
     std::cout << std::endl;
