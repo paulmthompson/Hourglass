@@ -217,13 +217,13 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
             auto img_folder_path = generate_output_path_from_json(experiment_path, this_view["prefix"]);
 
-            std::cout << "This experiment image data is " << img_folder_path << std::endl;
+            //std::cout << "This experiment image data is " << img_folder_path << std::endl;
 
             std::vector<name_and_path> this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
 
             auto label_folder_path = generate_output_path_from_json(experiment_path, this_view["label_prefix"]);
 
-            std::cout << "This experiment label data is " << label_folder_path << std::endl;
+            //std::cout << "This experiment label data is " << label_folder_path << std::endl;
 
             std::vector<name_and_path> this_view_labels = add_image_to_load(label_folder_path,data["labels"]["filetypes"],data["labels"]["name_prefix"]);
 

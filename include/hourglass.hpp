@@ -271,12 +271,13 @@ void load_weights(StackedHourglass& hourglass, const std::string& config_file) {
   json data = json::parse(f);
   f.close();
 
-  if (data["training"]["load-weights"]["load"])
-
-    {
+  if (data["training"]["load-weights"]["load"]) 
+  {
+    std::filesystem::path weight_path = data["training"]["load-weights"]["path"];
+    if (std::filesystem::exists(weight_path)) {
         try
         {
-            torch::load(hourglass,data["training"]["load-weights"]["path"]);
+            torch::load(hourglass,weight_path);
             std::cout << "Weights loaded" << std::endl;
         }
         catch (const c10::Error &e)
@@ -284,5 +285,8 @@ void load_weights(StackedHourglass& hourglass, const std::string& config_file) {
             std::cout << e.msg() << std::endl;
             std::cout << "Couldn't load previous weights" << std::endl;
         }
+    } else {
+    std::cout << "Could not load previous weights at path: " << weight_path.string() << std::endl;
     }
+  }
 }
