@@ -43,10 +43,14 @@ int main(int argc, char** argv) {
     }
 
     if (result["train"].as<bool>()) {
-      auto data_set = MyDataset(config_file).map(torch::data::transforms::Stack<>());
+
+      auto training_opts = training_options(config_file);
+
+      auto data_set = MyDataset(training_opts).map(torch::data::transforms::Stack<>());
       train_hourglass(hourglass,data_set,device,config_file);
 
-      data_set = MyDataset(config_file).map(torch::data::transforms::Stack<>());
+      training_opts.image_augmentation = false;
+      data_set = MyDataset(training_opts).map(torch::data::transforms::Stack<>());
       predict(hourglass,data_set,device,config_file);
     }
 

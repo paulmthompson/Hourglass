@@ -34,6 +34,42 @@ struct img_label_pair {
     paths labels;
 };
 
+class training_options {
+public:
+    training_options(const std::string& config_file) {
+        std::ifstream f(config_file);
+        json data = json::parse(f);
+        f.close();
+
+        this->epochs = 1;
+        if (data["training"].contains("epochs")) {
+            this->epochs = data["training"]["epochs"];
+        }
+        this->batch_size = 32;
+        if (data["training"].contains("batch-size")) {
+            this->batch_size = data["training"]["batch-size"];
+        }
+        this->learning_rate = 5e-5;
+        if (data["training"].contains("learning-rate")) {
+            this->learning_rate = data["training"]["learning-rate"];
+        }
+        this->image_augmentation = false;
+        if (data["training"].contains("image-augmentation")) {
+            this->image_augmentation = data["training"]["image-augmentation"];
+        }
+
+        this->config_file = config_file;
+    }
+
+    int batch_size;
+    int epochs;
+    float learning_rate;
+    bool image_augmentation;
+    std::string config_file;
+private:
+    
+};
+
 torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
 
@@ -170,23 +206,34 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 };
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair> image_paths, const std::string& config_file)
+ std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair> image_paths, training_options& training_opts)
  {
-    auto [w_img, h_img] = get_width_height(config_file,"images");
-    auto [w_label, h_label] = get_width_height(config_file,"labels");
+    auto [w_img, h_img] = get_width_height(training_opts.config_file,"images");
+    auto [w_label, h_label] = get_width_height(training_opts.config_file,"labels");
 
     std::vector<torch::Tensor> img_tensor;
     std::vector<torch::Tensor> label_tensor;
 
     for (auto& this_img_label : image_paths) {
         auto this_img = load_image(this_img_label.img,w_img,h_img);
-        auto this_label = load_image(this_img_label.labels[0],w_label,h_label);
 
-        auto [aug_img, aug_label]  = image_augmentation(this_img,this_label);
+        cv::Mat this_label;
+        std::vector<cv::Mat> array_of_labels;
+        for (int i=0; i<this_img_label.labels.size(); i++) {
+            array_of_labels.push_back(load_image(this_img_label.labels[i],w_label,h_label));
+        }
+        cv::merge(array_of_labels,this_label);
 
-        for (int i = 0; i < aug_img.size(); i++) {
-            img_tensor.push_back(convert_to_tensor(aug_img[i]));
-            label_tensor.push_back(convert_to_tensor(aug_label[i]));
+        if (training_opts.image_augmentation) {
+            auto [aug_img, aug_label]  = image_augmentation(this_img,this_label);
+
+            for (int i = 0; i < aug_img.size(); i++) {
+                img_tensor.push_back(convert_to_tensor(aug_img[i]));
+                label_tensor.push_back(convert_to_tensor(aug_label[i]));
+            }
+        } else {
+            img_tensor.push_back(convert_to_tensor(this_img));
+            label_tensor.push_back(convert_to_tensor(this_label));
         }
     }
 
@@ -252,11 +299,11 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
         torch::Tensor states_, labels_;
 
     public:
-        explicit MyDataset(const std::string& config_file) 
+        explicit MyDataset(training_options& training_opts) 
         {
-            auto img_label_files = read_json_file(config_file);
+            auto img_label_files = read_json_file(training_opts.config_file);
 
-            auto [states, labels] = read_images(img_label_files, config_file);
+            auto [states, labels] = read_images(img_label_files, training_opts);
 
             states_ = std::move(states);
             labels_ = std::move(labels);

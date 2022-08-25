@@ -172,6 +172,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     auto start = std::chrono::high_resolution_clock::now();
 
     int64_t batch_index = 0;
+    int64_t img_num = 0;
     for (auto &batch : *data_loader)
     {
         auto data = batch.data.to(device);
@@ -192,8 +193,9 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
             resultImg = combine_overlay(realImg,resultImg);
 
-            std::string img_name = "test" + std::to_string(batch_index) + "-" + std::to_string(j) + ".png";
+            std::string img_name = "test" + std::to_string(img_num) + ".png";
             cv::imwrite(img_name,resultImg);
+            img_num += 1;
         }
       
         std::cout << "\r"
