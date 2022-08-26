@@ -11,6 +11,7 @@
 #include <tuple>
 #include <algorithm>
 #include <vector>
+//#include <memory>
 
 #include "augmentation.hpp"
 
@@ -42,7 +43,7 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
     return image;
 };
 
-class img_label_path : label_path {
+class img_label_path : public label_path {
     public:
     std::filesystem::path path;
 
@@ -56,13 +57,16 @@ class img_label_path : label_path {
 
 };
 
-struct img_label_pair {
+class img_label_pair {
+    public:
+    img_label_pair() = default;
     img_label_pair(fs::path this_img, fs::path this_label) {
         this->img = this_img;
-        this->labels.push_back(img_label_path(this_label));
+        this->labels = std::vector<std::unique_ptr<img_label_path>>();
+        this->labels.push_back(std::make_unique<img_label_path>(this_label));
     }
     fs::path img;
-    std::vector<img_label_path> labels;
+    std::vector<std::unique_ptr<img_label_path>> labels;
 };
 
 class training_options {
@@ -224,7 +228,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 };
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair> image_paths, training_options& training_opts)
+ std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair>& image_paths, training_options& training_opts)
  {
     auto [w_img, h_img] = get_width_height(training_opts.config_file,"images");
     auto [w_label, h_label] = get_width_height(training_opts.config_file,"labels");
@@ -238,7 +242,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;
         for (int i=0; i<this_img_label.labels.size(); i++) {
-            array_of_labels.push_back(this_img_label.labels[i].load_image(w_label,h_label));
+            array_of_labels.push_back(this_img_label.labels[i]->load_image(w_label,h_label));
             //array_of_labels.push_back(load_image_from_path(this_img_label.labels[i].path,w_label,h_label));
         }
         cv::merge(array_of_labels,this_label);
