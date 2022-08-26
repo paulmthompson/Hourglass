@@ -24,14 +24,45 @@ using paths = std::vector<std::filesystem::path>;
 
 #pragma once
 
+class label_path {
+public:
+virtual cv::Mat load_image(int w, int h) const = 0;
+};
+
+//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
+cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
+    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
+    cv::Mat image;
+    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
+
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
+    }
+
+    return image;
+};
+
+class img_label_path : label_path {
+    public:
+    std::filesystem::path path;
+
+    img_label_path(std::filesystem::path this_path) {
+        this->path = this_path;
+    }
+
+    cv::Mat load_image(int w, int h) const override {
+        return load_image_from_path(this->path,w,h);
+    }
+
+};
+
 struct img_label_pair {
-    img_label_pair() {}
     img_label_pair(fs::path this_img, fs::path this_label) {
-        img = this_img;
-        labels.push_back(this_label);
+        this->img = this_img;
+        this->labels.push_back(img_label_path(this_label));
     }
     fs::path img;
-    paths labels;
+    std::vector<img_label_path> labels;
 };
 
 class training_options {
@@ -181,19 +212,6 @@ torch::Tensor convert_to_tensor(cv::Mat& image) {
     return tensor.permute({2,0,1});
 }
 
-//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-cv::Mat load_image(const std::filesystem::path& image_path, int w, int h) {
-    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
-    cv::Mat image;
-    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
-
-    if (!image.isContinuous()) {   
-        image = image.clone(); 
-    }
-
-    return image;
-};
-
 std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
 
     std::ifstream f(config_file);
@@ -215,12 +233,13 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
     std::vector<torch::Tensor> label_tensor;
 
     for (auto& this_img_label : image_paths) {
-        auto this_img = load_image(this_img_label.img,w_img,h_img);
+        auto this_img = load_image_from_path(this_img_label.img,w_img,h_img);
 
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;
         for (int i=0; i<this_img_label.labels.size(); i++) {
-            array_of_labels.push_back(load_image(this_img_label.labels[i],w_label,h_label));
+            array_of_labels.push_back(this_img_label.labels[i].load_image(w_label,h_label));
+            //array_of_labels.push_back(load_image_from_path(this_img_label.labels[i].path,w_label,h_label));
         }
         cv::merge(array_of_labels,this_label);
 
