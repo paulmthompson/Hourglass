@@ -185,9 +185,21 @@ std::filesystem::path generate_output_path_from_json(const std::filesystem::path
     return output_path;
 };
 
+typedef enum {MASK, PIXEL} LABEL_TYPE;
+
 struct name_and_path {
     std::string name;
     std::filesystem::path path;
+    int x;
+    int y;
+    LABEL_TYPE label_type;
+    name_and_path(std::string name, std::filesystem::path path) {
+        this->name = name;
+        this->path = path;
+        this->x = 0;
+        this->y = 0;
+        this->label_type = MASK;
+    }
 };
 
 std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
@@ -288,21 +300,29 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
         std::cout << "Loading experiment path: " << experiment_path << std::endl;
 
+        // We may have different views (cameras) for the same experiment.
         for (const auto& this_view : data["images"]["views"]) {
 
             auto img_folder_path = generate_output_path_from_json(experiment_path, this_view["prefix"]);
 
-            //std::cout << "This experiment image data is " << img_folder_path << std::endl;
-
+            //The paths to all of our images will be found.
             std::vector<name_and_path> this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
 
+            //Our labels are located in this directory (or subdirects of this directory)
             auto label_folder_path = generate_output_path_from_json(experiment_path, this_view["label_prefix"]);
 
-            //std::cout << "This experiment label data is " << label_folder_path << std::endl;
+            // Our labels can be masks corresponding to each image, or points (which we will generate masks from)
+            // image type should be directed to folders
+            std::filesystem::path this_label_folder_path = label_folder_path;
+            std::string label_name = data["labels"]["names"][0];
+            this_label_folder_path /= label_name;
+            std::vector<name_and_path> this_view_labels = add_image_to_load(this_label_folder_path,data["labels"]["filetypes"],
+                                                            data["labels"]["name_prefix"]);
 
-            std::vector<name_and_path> this_view_labels = add_image_to_load(label_folder_path,data["labels"]["filetypes"],data["labels"]["name_prefix"]);
-
+            // Loop through all of the images
             for (const auto& this_img : this_view_images) {
+
+                // Loop through all of the labels 
                 for (const auto& this_label : this_view_labels) {
                     if (this_img.name.compare(this_label.name) == 0) {
                         img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
