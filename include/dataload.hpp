@@ -200,6 +200,13 @@ struct name_and_path {
         this->y = 0;
         this->label_type = MASK;
     }
+    name_and_path(std::filesystem::path path, int x, int y) {
+        this->name = "";
+        this->path = path;
+        this->x = x;
+        this->y = y;
+        this->label_type = PIXEL;
+    }
 };
 
 std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
@@ -314,23 +321,30 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
             // Our labels can be masks corresponding to each image, or points (which we will generate masks from)
             // image type should be directed to folders
             std::filesystem::path this_label_folder_path = label_folder_path;
-            std::string label_name = data["labels"]["names"][0];
-            this_label_folder_path /= label_name;
-            std::vector<name_and_path> this_view_labels = add_image_to_load(this_label_folder_path,data["labels"]["filetypes"],
-                                                            data["labels"]["name_prefix"]);
 
-            // Loop through all of the images
-            for (const auto& this_img : this_view_images) {
+            for (int i = 0; i< data["labels"]["labels"].size(); i ++ ) {
 
-                // Loop through all of the labels 
-                for (const auto& this_label : this_view_labels) {
-                    if (this_img.name.compare(this_label.name) == 0) {
-                        img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
-                        break;
+                std::string label_name = data["labels"]["labels"][i]["name"];
+                auto label_filetypes = data["labels"]["labels"][i]["filetypes"];
+                auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
+
+                this_label_folder_path /= label_name;
+                std::vector<name_and_path> this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
+                                    label_prefix);
+
+                // Loop through all of the images
+                for (const auto& this_img : this_view_images) {
+
+                    // Loop through all of the labels 
+                    for (const auto& this_label : this_view_labels) {
+                        if (this_img.name.compare(this_label.name) == 0) {
+                            img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
+                            break;
+                        }
                     }
                 }
-            }
 
+            }
         }  
     }
 
