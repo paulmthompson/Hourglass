@@ -11,7 +11,7 @@
 #include <tuple>
 #include <algorithm>
 #include <vector>
-//#include <memory>
+#include <memory>
 
 #include "augmentation.hpp"
 
@@ -25,11 +25,6 @@ using paths = std::vector<std::filesystem::path>;
 
 #pragma once
 
-class label_path {
-public:
-virtual cv::Mat load_image(int w, int h) const = 0;
-};
-
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
 cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
     cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
@@ -41,6 +36,12 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
     }
 
     return image;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+class label_path {
+public:
+virtual cv::Mat load_image(int w, int h) const = 0;
 };
 
 class img_label_path : public label_path {
@@ -68,6 +69,8 @@ class img_label_pair {
     fs::path img;
     std::vector<std::unique_ptr<img_label_path>> labels;
 };
+
+/////////////////////////////////////////////////////////////////////////////////
 
 class training_options {
 public:
@@ -104,6 +107,8 @@ public:
 private:
     
 };
+
+/////////////////////////////////////////////////////////////////////////////////
 
 torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
@@ -314,7 +319,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
     return img_label_files;
 };
 
-
+/////////////////////////////////////////////////////////////////////////////////
 
  class MyDataset : public torch::data::Dataset<MyDataset>
 {
