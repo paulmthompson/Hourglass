@@ -327,10 +327,18 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
                 std::string label_name = data["labels"]["labels"][i]["name"];
                 auto label_filetypes = data["labels"]["labels"][i]["filetypes"];
                 auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
+                std::string label_type = data["labels"]["labels"][i]["type"];
 
                 this_label_folder_path /= label_name;
-                std::vector<name_and_path> this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
+                std::vector<name_and_path> this_view_labels;
+
+                if (label_type.compare("mask") == 0) {
+                    this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
                                     label_prefix);
+                } else {
+                    std::cout << "unsupported filetype for label. aborting" << std::endl;
+                    break;
+                }
 
                 // Loop through all of the images
                 for (const auto& this_img : this_view_images) {
