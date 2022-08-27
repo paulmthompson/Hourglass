@@ -185,6 +185,8 @@ std::filesystem::path generate_output_path_from_json(const std::filesystem::path
     return output_path;
 };
 
+/////////////////////////////////////////////////////////////////////////////////
+
 typedef enum {MASK, PIXEL} LABEL_TYPE;
 
 struct name_and_path {
@@ -200,9 +202,9 @@ struct name_and_path {
         this->y = 0;
         this->label_type = MASK;
     }
-    name_and_path(std::filesystem::path path, int x, int y) {
-        this->name = "";
-        this->path = path;
+    name_and_path(std::string name, int x, int y) {
+        this->name = name;
+        this->path = "";
         this->x = x;
         this->y = y;
         this->label_type = PIXEL;
@@ -225,6 +227,37 @@ std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder
     }
     return out_images;
 };
+
+
+std::vector<name_and_path> add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& filename, std::string label_name) {
+    
+    std::vector<name_and_path> out_images;
+
+    for (const auto & entry : fs::directory_iterator(folder_path)) {
+        std::cout << entry << std::endl;
+    }
+
+    /*
+    std::ifstream f(file_path);
+    json data = json::parse(f);
+    f.close();
+
+    for (const auto& label : data) {
+        std::string img_name = label["image"];
+        int x = label["labels"][label_name][0];
+        int y = label["labels"][label_name][1];
+
+        out_images.push_back(name_and_path(img_name,x,y));
+    }
+    */
+
+
+    
+    return out_images;
+};
+
+
+/////////////////////////////////////////////////////////////////////////////////
 
 torch::Tensor convert_to_tensor(cv::Mat& image) {
 
@@ -325,16 +358,23 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
             for (int i = 0; i< data["labels"]["labels"].size(); i ++ ) {
 
                 std::string label_name = data["labels"]["labels"][i]["name"];
-                auto label_filetypes = data["labels"]["labels"][i]["filetypes"];
-                auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
                 std::string label_type = data["labels"]["labels"][i]["type"];
 
-                this_label_folder_path /= label_name;
+                auto this_label_folder_path = label_folder_path / label_name;
+                //this_label_folder_path /= label_name;
                 std::vector<name_and_path> this_view_labels;
 
                 if (label_type.compare("mask") == 0) {
+
+                    auto label_filetypes = data["labels"]["labels"][i]["filetypes"];
+                    auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
+
                     this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
                                     label_prefix);
+                } else if (label_type.compare("pixel") == 0) {
+
+                    auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
+                    this_view_labels = add_pixels_to_load(this_label_folder_path,label_prefix, label_name);
                 } else {
                     std::cout << "unsupported filetype for label. aborting" << std::endl;
                     break;
