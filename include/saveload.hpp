@@ -24,7 +24,7 @@ public:
         this->y_dim = y_dim;
         this->prediction_frame = std::vector<uint8_t>(x_dim * y_dim);
     }
-    void save_frame(const torch::Tensor &pred_frame, const int frame_index, const float thres)
+    void save_frame(const torch::Tensor &pred_frame, const int frame_index, const float thres) // save_frame is 4-D array
     {
 
         this->frame.push_back(frame_index);

@@ -171,6 +171,8 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
     auto start = std::chrono::high_resolution_clock::now();
 
+    const auto output_channels = hourglass->get_output_dims();
+
     int64_t batch_index = 0;
     int64_t img_num = 0;
     for (auto &batch : *data_loader)
@@ -186,15 +188,22 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
         auto data_raw_data_ptr = data. template data_ptr<uchar>();
 
+        int label_to_read = 0;
         for (int j = 0; j < prediction.size(3); j++) {
 
-            cv::Mat resultImg(out_height,out_width,CV_8UC1, tensor_raw_data_ptr + (out_height*out_width*j));
             cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
 
-            resultImg = combine_overlay(realImg,resultImg);
+            for (int k = 0; k < output_channels; k++) {
 
-            std::string img_name = "test" + std::to_string(img_num) + ".png";
-            cv::imwrite(img_name,resultImg);
+                cv::Mat resultImg(out_height,out_width,CV_8UC1, tensor_raw_data_ptr + (out_height*out_width*label_to_read));
+
+                resultImg = combine_overlay(realImg,resultImg);
+
+                std::string img_name = "test" + std::to_string(img_num) + "_" + std::to_string(k) + ".png";
+                cv::imwrite(img_name,resultImg);
+
+                label_to_read += 1;
+            }
             img_num += 1;
         }
       

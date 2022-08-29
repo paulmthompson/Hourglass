@@ -28,6 +28,9 @@ using paths = std::vector<std::filesystem::path>;
 
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
 cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
+    if (!fs::exists(image_path)) {
+        std::cout << "File path does not exist at " << image_path.string() << std::endl;
+    }
     cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
     cv::Mat image;
     cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
@@ -39,11 +42,28 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
     return image;
 };
 
-cv::Mat generate_heatmap(const int x, const int y, const int rad, const int w, const int h) {
+cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) {
     
-    cv::Mat image(w,h,CV_8UC1);
-    uchar & point = image.at<uchar>(y,x);
+    int img_w = 640;
+    int img_h = 480;
+
+    if ((x > img_w) | (y > img_h)) {
+        std::cout << "Coordinate is out of bounds" << std::endl;
+    }
+
+    cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_8UC1);
+    uchar & point = raw_image.at<uchar>(y,x);
     point = 255;
+
+    cv::Mat raw_image2;
+    cv::GaussianBlur(raw_image, raw_image2, cv::Size(rad,rad), 0);
+
+    cv::Mat raw_image3;
+    cv::normalize(raw_image2,raw_image3,0,255,cv::NORM_MINMAX);
+
+    cv::Mat image = cv::Mat(h,w,CV_8UC1);
+
+    cv::resize(raw_image3,image,image.size(),0.0,0.0,cv::INTER_AREA);
 
     if (!image.isContinuous()) {   
         image = image.clone(); 
@@ -55,7 +75,15 @@ cv::Mat generate_heatmap(const int x, const int y, const int rad, const int w, c
 /////////////////////////////////////////////////////////////////////////////////
 class label_path {
 public:
+label_path() = default;
+
+label_path(const label_path&) =delete;
+void operator=(const label_path&) =delete;
+
+virtual ~label_path() {}
+
 virtual cv::Mat load_image(int w, int h) const = 0;
+
 };
 
 class pixel_label_path : public label_path {
@@ -63,9 +91,9 @@ public:
     pixel_label_path(int x, int y) {
         this->x = x;
         this->y = y;
-        this->rad = 5;
+        this->rad = 51; // This needs to be an odd number
     }
-    cv:: Mat load_image(int w, int h) const override {
+    cv::Mat load_image(int w, int h) const override {
         return generate_heatmap(this->x, this->y, this->rad, w, h);
     }
 
@@ -78,7 +106,6 @@ int rad;
 
 class img_label_path : public label_path {
     public:
-    
 
     img_label_path(std::filesystem::path this_path) {
         this->path = this_path;
@@ -98,18 +125,20 @@ class img_label_pair {
     img_label_pair() = default;
     img_label_pair(fs::path this_img) {
         this->img = this_img;
-        this->labels = std::vector<std::unique_ptr<label_path>>();
+        //this->labels = std::vector<std::unique_ptr<label_path>>();
     }
     img_label_pair(fs::path this_img, fs::path this_label) {
         this->img = this_img;
         this->labels = std::vector<std::unique_ptr<label_path>>();
-        this->labels.push_back(std::make_unique<img_label_path>(this_label));
+        this->labels.emplace_back(std::make_unique<img_label_path>(this_label));
     }
     void add_label(fs::path this_label) {
-        this->labels.push_back(std::make_unique<img_label_path>(this_label));
+        auto label = std::make_unique<img_label_path>(this_label);
+        this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
     }
     void add_label(int x, int y) {
-        this->labels.push_back(std::make_unique<pixel_label_path>(x,y));
+        auto label = std::make_unique<pixel_label_path>(x,y);
+        this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
     }
     fs::path img;
     std::vector<std::unique_ptr<label_path>> labels;
@@ -325,7 +354,7 @@ torch::Tensor convert_to_tensor(cv::Mat& image) {
     // Copy over the data 
     std::memcpy(tensor.data_ptr(), reinterpret_cast<void*>(image.data), tensor.numel() * sizeof(at::kByte));
 
-    return tensor.permute({2,0,1});
+    return tensor.permute({2,0,1}); // Single image
 }
 
 std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
@@ -353,12 +382,21 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;
-        //for (int i=0; i < 1; i++) {
-        for (int i=0; i<this_img_label.labels.size(); i++) {
+        /*
+        for (int i = 1; i < 2; i++) {
             array_of_labels.push_back(this_img_label.labels[i]->load_image(w_label,h_label));
-            //array_of_labels.push_back(load_image_from_path(this_img_label.labels[i].path,w_label,h_label));
         }
+        */
+        
+        for (auto const& f : this_img_label.labels) {
+            array_of_labels.push_back(f->load_image(w_label,h_label));
+        }
+        
         cv::merge(array_of_labels,this_label);
+
+        //std::cout << "Image width: " << this_label.rows << std::endl;
+        //std::cout << "Image height: " << this_label.cols << std::endl;
+        //std::cout << "Image channels: " << this_label.channels() << std::endl;
 
         if (training_opts.image_augmentation) {
             auto [aug_img, aug_label]  = image_augmentation(this_img,this_label);
@@ -387,7 +425,6 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
                                                 const int label_num,
                                                 const json& data) {
 
-    //this_label_folder_path /= label_name;
     std::unordered_map<std::string,name_and_path> this_view_labels; // This should be an unordered map 
 
     if (label_type.compare("mask") == 0) {

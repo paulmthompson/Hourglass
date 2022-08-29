@@ -268,7 +268,7 @@ StackedHourglass createHourglass(const std::string& config_file) {
     const int input_dimensions = data["hourglass"]["input-dimensions"];
     const int output_dimensions = data["hourglass"]["output-dimensions"];
 
-    StackedHourglass hourglass(stacks,channels,input_dimensions,output_dimensions);
+    StackedHourglass hourglass(stacks,channels,output_dimensions,input_dimensions);
 
     return hourglass;
 }
