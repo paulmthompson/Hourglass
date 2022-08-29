@@ -39,14 +39,40 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
     return image;
 };
 
+cv::Mat generate_heatmap(const int x, const int y, const int rad, const int w, const int h) {
+    
+    cv::Mat image(w,h,CV_8UC1);
+    uchar & point = image.at<uchar>(y,x);
+    point = 255;
+
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
+    }
+
+    return image;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 class label_path {
 public:
 virtual cv::Mat load_image(int w, int h) const = 0;
 };
 
-class pixel_label_path : label_path {
+class pixel_label_path : public label_path {
 public:
+    pixel_label_path(int x, int y) {
+        this->x = x;
+        this->y = y;
+        this->rad = 5;
+    }
+    cv:: Mat load_image(int w, int h) const override {
+        return generate_heatmap(this->x, this->y, this->rad, w, h);
+    }
+
+private:
+int x;
+int y;
+int rad;
 
 };
 
@@ -81,6 +107,9 @@ class img_label_pair {
     }
     void add_label(fs::path this_label) {
         this->labels.push_back(std::make_unique<img_label_path>(this_label));
+    }
+    void add_label(int x, int y) {
+        this->labels.push_back(std::make_unique<pixel_label_path>(x,y));
     }
     fs::path img;
     std::vector<std::unique_ptr<label_path>> labels;
@@ -324,8 +353,8 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;
-        for (int i=0; i < 1; i++) {
-        //for (int i=0; i<this_img_label.labels.size(); i++) {
+        //for (int i=0; i < 1; i++) {
+        for (int i=0; i<this_img_label.labels.size(); i++) {
             array_of_labels.push_back(this_img_label.labels[i]->load_image(w_label,h_label));
             //array_of_labels.push_back(load_image_from_path(this_img_label.labels[i].path,w_label,h_label));
         }
@@ -469,7 +498,11 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
                 if (matched_labels.size() == view_labels.size()) {
                     img_label_files.push_back(img_label_pair(this_img.second.path));
                     for (const auto& label : matched_labels) {
-                        img_label_files.back().add_label(label.path);
+                        if (label.label_type == MASK) {
+                            img_label_files.back().add_label(label.path);
+                        } else if (label.label_type == PIXEL){
+                            img_label_files.back().add_label(label.x,label.y);
+                        }
                     }
                 }
             }

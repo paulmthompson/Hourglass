@@ -184,7 +184,9 @@ struct StackedHourglassImpl : nn::Module {
         o1(nstack,OutLayer(N)),
         c1(nstack,Conv0(N,k,1,1,0)),
         merge_features(nstack-1,Conv0(N,N,1,1,0)),
-        merge_preds(nstack-1,Conv0(k,N,1,1,0))
+        merge_preds(nstack-1,Conv0(k,N,1,1,0)),
+        input_dims(N_Input_Channel),
+        output_dims(k)
 
  {
    register_module("fb",fb);
@@ -240,12 +242,18 @@ struct StackedHourglassImpl : nn::Module {
    
    return preds;
  }
+
+    int get_input_dims() const {return input_dims;}
+    int get_output_dims() const {return output_dims;}
+
     FirstLayer fb;
     std::vector<Hourglass> hg;
     std::vector<OutLayer> o1;
     std::vector<Conv0> c1;
     std::vector<Conv0> merge_features;
     std::vector<Conv0> merge_preds;
+    int input_dims;
+    int output_dims;
 };
 TORCH_MODULE(StackedHourglass);
 
