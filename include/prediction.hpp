@@ -90,7 +90,7 @@ public:
         }
         
         std::filesystem::path vid_path = this->vid_name;
-        this->output_save_path = vid_path.stem().string() + ".h5";
+        this->output_save_path = vid_path.stem().string();
         if (data["prediction"].contains("output_file_path")) {
             this->output_save_path = data["prediction"]["output_file_path"];
         }
@@ -222,13 +222,13 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
 };
 
-void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int frame_index) {
+void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
 
     float thres = 0.1 * 255;
 
     for (int j = 0; j < pred.size(3); j++) {
 
-        auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),torch::indexing::Slice(),j});
+        auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
 
         if (torch::any(my_slice.greater(thres)).item().toBool()) {
             //std::cout << "Tongue detected at " << frame_index + j << std::endl;
@@ -266,9 +266,15 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
         ve.openFile();
     }
 
-    auto save_output = save_structure(out_height,out_width);
-
     auto start = std::chrono::high_resolution_clock::now();
+
+    const auto output_channels = hourglass->get_output_dims();
+
+    std::vector<save_structure> save_output;
+    for (int i = 0; i < output_channels; i ++) {
+        save_output.push_back(save_structure(out_height,out_width));
+    }
+    
 
     int64_t batch_index = 0;
     //Frames are 0 indexed by ffmpeg, but we specify frames as 1,2,3 etc
@@ -291,7 +297,9 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
         auto prediction_raw_data_ptr = prediction.data_ptr<uchar>();
 
         if (options.save_hdf5) {
-            get_data_to_save(prediction,save_output,frame_index);
+            for (int i = 0; i < output_channels; i ++ ) {
+                get_data_to_save(prediction,save_output[i],frame_index,i);
+            }
         }
 
         if (options.save_images | options.save_video) {
@@ -300,25 +308,31 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
             auto data_raw_data_ptr = data.data_ptr<uchar>();
 
+            int label_to_read = 0;
             for (int j = 0; j < prediction.size(3); j++) {
 
-                cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
                 cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
 
-                cv::Mat overlayImg = combine_overlay(realImg,resultImg);
-            
-                if (options.save_images) {
+                for (int k = 0; k < output_channels; k++) {
 
-                    std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
-                    cv::imwrite(img_name,overlayImg);
+                    cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
                     
-                } else if (options.save_video) {
+                    cv::Mat overlayImg = combine_overlay(realImg,resultImg);
+            
+                    if (options.save_images) {
 
-                    cv::Mat overlayImg2;
-                    cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
-                    std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
-                    ve.writeFrameRGB0(save_frame);
+                        std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                        cv::imwrite(img_name,overlayImg);
+                    
+                    } else if (options.save_video) {
 
+                        cv::Mat overlayImg2;
+                        cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
+                        std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
+                        ve.writeFrameRGB0(save_frame);
+
+                    }
+                    label_to_read += 1;
                 }
             }
         }
@@ -335,7 +349,10 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     }
 
     std::cout << std::endl;
-    save_output.write(options.output_save_path); // This should be done more frequently to ensure that RAM doesn't disappear.
+    for (int i = 0; i < output_channels; i ++) {
+        std::string fn = options.output_save_path + "_" + std::to_string(i) + ".h5";
+        save_output[i].write(fn);
+    } // This should be done more frequently to ensure that RAM doesn't disappear.
 
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t1 - start;
