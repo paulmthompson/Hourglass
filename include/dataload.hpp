@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 #include "augmentation.hpp"
 
@@ -61,9 +62,16 @@ class img_label_path : public label_path {
 class img_label_pair {
     public:
     img_label_pair() = default;
+    img_label_pair(fs::path this_img) {
+        this->img = this_img;
+        this->labels = std::vector<std::unique_ptr<img_label_path>>();
+    }
     img_label_pair(fs::path this_img, fs::path this_label) {
         this->img = this_img;
         this->labels = std::vector<std::unique_ptr<img_label_path>>();
+        this->labels.push_back(std::make_unique<img_label_path>(this_label));
+    }
+    void add_label(fs::path this_label) {
         this->labels.push_back(std::make_unique<img_label_path>(this_label));
     }
     fs::path img;
@@ -195,6 +203,7 @@ struct name_and_path {
     int x;
     int y;
     LABEL_TYPE label_type;
+    name_and_path() = default;
     name_and_path(std::string name, std::filesystem::path path) {
         this->name = name;
         this->path = path;
@@ -211,47 +220,56 @@ struct name_and_path {
     }
 };
 
-std::vector<name_and_path> add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
+//I think this should be an unordered map
+
+std::unordered_map<std::string,name_and_path> 
+add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
     
-    std::vector<name_and_path> out_images;
+    std::unordered_map<std::string,name_and_path> out_images;
 
     std::regex image_regex(json_prefix);
     for (const auto & file_type : json_filetypes) {
         for (const auto & entry : fs::directory_iterator(folder_path)) {
             if (entry.path().extension() == file_type.get<std::string>()) {
                 std::filesystem::path image_file_path = folder_path / entry.path();
+
+                // Here we remove the image name prefix so that it is just a number.
                 std::string image_name = std::regex_replace(entry.path().stem().string(), image_regex, "");
-                out_images.push_back(name_and_path{image_name,image_file_path});
+                out_images[image_name]=name_and_path(image_name,image_file_path);
             }
         }
     }
     return out_images;
 };
 
-
-std::vector<name_and_path> add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& filename, std::string label_name) {
+//Unordered map with image name as key
+std::unordered_map<std::string,name_and_path> 
+add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& img_prefix, std::string label_name) {
     
-    std::vector<name_and_path> out_images;
+    std::unordered_map<std::string,name_and_path> out_images;
 
+    std::filesystem::path label_path;
     for (const auto & entry : fs::directory_iterator(folder_path)) {
-        std::cout << entry << std::endl;
+        if (entry.path().extension() == ".json") {
+            label_path = entry.path();
+            std::cout << entry.path().string() << std::endl;
+        }
     }
-
-    /*
-    std::ifstream f(file_path);
+    
+    std::ifstream f(label_path);
     json data = json::parse(f);
     f.close();
 
+    std::regex image_regex(img_prefix);
     for (const auto& label : data) {
-        std::string img_name = label["image"];
-        int x = label["labels"][label_name][0];
-        int y = label["labels"][label_name][1];
+        fs::path img_name = label["image"];
+        std::string img_name2 = std::regex_replace(img_name.stem().string(), image_regex, "");
+        int x = label["labels"][label_name][0]; // X
+        int y = label["labels"][label_name][1]; // Y
 
-        out_images.push_back(name_and_path(img_name,x,y));
+        out_images[img_name]=name_and_path(img_name2,x,y);
     }
-    */
-
-
+    
     
     return out_images;
 };
@@ -298,7 +316,8 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;
-        for (int i=0; i<this_img_label.labels.size(); i++) {
+        for (int i=0; i < 1; i++) {
+        //for (int i=0; i<this_img_label.labels.size(); i++) {
             array_of_labels.push_back(this_img_label.labels[i]->load_image(w_label,h_label));
             //array_of_labels.push_back(load_image_from_path(this_img_label.labels[i].path,w_label,h_label));
         }
@@ -322,6 +341,55 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
     return std::make_tuple(make_tensor_stack(img_tensor),make_tensor_stack(label_tensor));
  };
 
+ /////////////////////////////////////////////////////////////////////////////////
+
+ std::optional<std::unordered_map<std::string,name_and_path>> 
+ get_labels_name_and_path(const fs::path& this_label_folder_path, 
+                                                const std::string& label_name, 
+                                                const std::string& label_type,
+                                                const int label_num,
+                                                const json& data) {
+
+    //this_label_folder_path /= label_name;
+    std::unordered_map<std::string,name_and_path> this_view_labels; // This should be an unordered map 
+
+    if (label_type.compare("mask") == 0) {
+
+        auto label_filetypes = data["labels"]["labels"][label_num]["filetypes"];
+        auto label_prefix = data["labels"]["labels"][label_num]["name_prefix"];
+
+        this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
+                                    label_prefix);
+    } else if (label_type.compare("pixel") == 0) {
+
+        auto label_prefix = data["labels"]["labels"][label_num]["name_prefix"];
+        this_view_labels = add_pixels_to_load(this_label_folder_path,label_prefix, label_name);
+    } else {
+        std::cout << "unsupported filetype for label. aborting" << std::endl;
+        return std::nullopt;
+    }
+
+    return this_view_labels;
+ };
+
+void match_image_and_labels(std::vector<name_and_path>& this_view_images, 
+                            std::vector<name_and_path>& this_view_labels) {
+
+    std::vector<img_label_pair> img_label_files;
+
+    // Loop through all of the images
+    for (const auto& this_img : this_view_images) {
+
+        // Loop through all of the labels 
+        for (const auto& this_label : this_view_labels) {
+            if (this_img.name.compare(this_label.name) == 0) {
+                img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
+                break;
+            }
+        }
+    }
+};
+
 std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
     std::ifstream f(config_file);
@@ -332,7 +400,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
 
     std::filesystem::path data_path = data["folder_path"];
 
-    std::vector<img_label_pair> img_label_files;
+    std::vector<img_label_pair> img_label_files; // Output for all views and experiments
 
     for (const auto& entry : data["experiments"]) {
 
@@ -346,7 +414,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
             auto img_folder_path = generate_output_path_from_json(experiment_path, this_view["prefix"]);
 
             //The paths to all of our images will be found.
-            std::vector<name_and_path> this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
+            auto this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
 
             //Our labels are located in this directory (or subdirects of this directory)
             auto label_folder_path = generate_output_path_from_json(experiment_path, this_view["label_prefix"]);
@@ -355,43 +423,48 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
             // image type should be directed to folders
             std::filesystem::path this_label_folder_path = label_folder_path;
 
+            std::vector<std::unordered_map<std::string, name_and_path>> view_labels;
+
             for (int i = 0; i< data["labels"]["labels"].size(); i ++ ) {
 
                 std::string label_name = data["labels"]["labels"][i]["name"];
                 std::string label_type = data["labels"]["labels"][i]["type"];
 
                 auto this_label_folder_path = label_folder_path / label_name;
-                //this_label_folder_path /= label_name;
-                std::vector<name_and_path> this_view_labels;
+                
+                auto this_view_labels = get_labels_name_and_path(this_label_folder_path,
+                                                label_name, 
+                                                label_type,
+                                                i,
+                                                data);
 
-                if (label_type.compare("mask") == 0) {
-
-                    auto label_filetypes = data["labels"]["labels"][i]["filetypes"];
-                    auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
-
-                    this_view_labels = add_image_to_load(this_label_folder_path,label_filetypes,
-                                    label_prefix);
-                } else if (label_type.compare("pixel") == 0) {
-
-                    auto label_prefix = data["labels"]["labels"][i]["name_prefix"];
-                    this_view_labels = add_pixels_to_load(this_label_folder_path,label_prefix, label_name);
-                } else {
-                    std::cout << "unsupported filetype for label. aborting" << std::endl;
-                    break;
+                if (this_view_labels.has_value()) {
+                    view_labels.push_back(this_view_labels.value());
                 }
+            }
+            // Loop through all of the images
+            for (const auto& this_img : this_view_images) {
 
-                // Loop through all of the images
-                for (const auto& this_img : this_view_images) {
+                std::vector<name_and_path> matched_labels;
+                // Loop through all of the labels types
+                for (int i = 0; i < view_labels.size(); i ++) {
 
-                    // Loop through all of the labels 
-                    for (const auto& this_label : this_view_labels) {
-                        if (this_img.name.compare(this_label.name) == 0) {
-                            img_label_files.push_back(img_label_pair(this_img.path,this_label.path));
+                    for (const auto& this_label : view_labels[i]) {
+                        if (this_img.second.name.compare(this_label.second.name) == 0) {
+                            matched_labels.push_back(this_label.second);
                             break;
                         }
                     }
                 }
-
+                
+                std::cout << "Size of the matched labels is " << matched_labels.size() << std::endl;
+                std::cout << "Size of the labels for this view is " << view_labels.size() << std::endl;
+                if (matched_labels.size() == view_labels.size()) {
+                    img_label_files.push_back(img_label_pair(this_img.second.path));
+                    for (const auto& label : matched_labels) {
+                        img_label_files.back().add_label(label.path);
+                    }
+                }
             }
         }  
     }
