@@ -45,9 +45,14 @@ public:
 virtual cv::Mat load_image(int w, int h) const = 0;
 };
 
+class pixel_label_path : label_path {
+public:
+
+};
+
 class img_label_path : public label_path {
     public:
-    std::filesystem::path path;
+    
 
     img_label_path(std::filesystem::path this_path) {
         this->path = this_path;
@@ -57,6 +62,9 @@ class img_label_path : public label_path {
         return load_image_from_path(this->path,w,h);
     }
 
+    private:
+    std::filesystem::path path;
+
 };
 
 class img_label_pair {
@@ -64,18 +72,18 @@ class img_label_pair {
     img_label_pair() = default;
     img_label_pair(fs::path this_img) {
         this->img = this_img;
-        this->labels = std::vector<std::unique_ptr<img_label_path>>();
+        this->labels = std::vector<std::unique_ptr<label_path>>();
     }
     img_label_pair(fs::path this_img, fs::path this_label) {
         this->img = this_img;
-        this->labels = std::vector<std::unique_ptr<img_label_path>>();
+        this->labels = std::vector<std::unique_ptr<label_path>>();
         this->labels.push_back(std::make_unique<img_label_path>(this_label));
     }
     void add_label(fs::path this_label) {
         this->labels.push_back(std::make_unique<img_label_path>(this_label));
     }
     fs::path img;
-    std::vector<std::unique_ptr<img_label_path>> labels;
+    std::vector<std::unique_ptr<label_path>> labels;
 };
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -457,8 +465,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
                     }
                 }
                 
-                std::cout << "Size of the matched labels is " << matched_labels.size() << std::endl;
-                std::cout << "Size of the labels for this view is " << view_labels.size() << std::endl;
+
                 if (matched_labels.size() == view_labels.size()) {
                     img_label_files.push_back(img_label_pair(this_img.second.path));
                     for (const auto& label : matched_labels) {
