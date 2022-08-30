@@ -51,25 +51,30 @@ cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) 
         std::cout << "Coordinate is out of bounds" << std::endl;
     }
 
-    cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_8UC1);
-    uchar & point = raw_image.at<uchar>(y,x);
-    point = 255;
+    cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_32FC1);
+    float & point = raw_image.at<float>(y,x);
+    point = 255.0;
 
     cv::Mat raw_image2;
     cv::GaussianBlur(raw_image, raw_image2, cv::Size(rad,rad), 0);
 
     cv::Mat raw_image3;
-    cv::normalize(raw_image2,raw_image3,0,255,cv::NORM_MINMAX);
+    cv::normalize(raw_image2,raw_image3,0.0,255.0,cv::NORM_MINMAX);
 
-    cv::Mat image = cv::Mat(h,w,CV_8UC1);
+    cv::Mat image = cv::Mat(h,w,CV_32FC1);
 
     cv::resize(raw_image3,image,image.size(),0.0,0.0,cv::INTER_AREA);
 
-    if (!image.isContinuous()) {   
-        image = image.clone(); 
+    cv::Mat image_out = cv::Mat(h,w,CV_8UC1);
+    image.convertTo(image_out,CV_8UC1);
+
+    if (!image_out.isContinuous()) {   
+        image_out = image_out.clone(); 
     }
 
-    return image;
+    imwrite("test.png",image_out);
+
+    return image_out;
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -88,10 +93,10 @@ virtual cv::Mat load_image(int w, int h) const = 0;
 
 class pixel_label_path : public label_path {
 public:
-    pixel_label_path(int x, int y) {
+    pixel_label_path(int x, int y,int rad) {
         this->x = x;
         this->y = y;
-        this->rad = 51; // This needs to be an odd number
+        this->rad = rad; // This needs to be an odd number
     }
     cv::Mat load_image(int w, int h) const override {
         return generate_heatmap(this->x, this->y, this->rad, w, h);
@@ -136,8 +141,8 @@ class img_label_pair {
         auto label = std::make_unique<img_label_path>(this_label);
         this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
     }
-    void add_label(int x, int y) {
-        auto label = std::make_unique<pixel_label_path>(x,y);
+    void add_label(int x, int y,int rad) {
+        auto label = std::make_unique<pixel_label_path>(x,y,rad);
         this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
     }
     fs::path img;
@@ -169,6 +174,10 @@ public:
         if (data["training"].contains("image-augmentation")) {
             this->image_augmentation = data["training"]["image-augmentation"];
         }
+        this->keypoint_radius = 101;
+        if (data["training"].contains("keypoint-radius")) {
+            this->keypoint_radius = data["training"]["keypoint-radius"];
+        }
 
         this->config_file = config_file;
     }
@@ -178,6 +187,7 @@ public:
     float learning_rate;
     bool image_augmentation;
     std::string config_file;
+    int keypoint_radius;
 private:
     
 };
@@ -464,9 +474,9 @@ void match_image_and_labels(std::vector<name_and_path>& this_view_images,
     }
 };
 
-std::vector<img_label_pair> read_json_file(const std::string& config_file) {
+std::vector<img_label_pair> read_json_file(training_options& opts) {
 
-    std::ifstream f(config_file);
+    std::ifstream f(opts.config_file);
     json data = json::parse(f);
     f.close();
 
@@ -538,7 +548,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
                         if (label.label_type == MASK) {
                             img_label_files.back().add_label(label.path);
                         } else if (label.label_type == PIXEL){
-                            img_label_files.back().add_label(label.x,label.y);
+                            img_label_files.back().add_label(label.x,label.y,opts.keypoint_radius);
                         }
                     }
                 }
@@ -561,7 +571,7 @@ std::vector<img_label_pair> read_json_file(const std::string& config_file) {
     public:
         explicit MyDataset(training_options& training_opts) 
         {
-            auto img_label_files = read_json_file(training_opts.config_file);
+            auto img_label_files = read_json_file(training_opts);
 
             auto [states, labels] = read_images(img_label_files, training_opts);
 

@@ -23,7 +23,7 @@ using json = nlohmann::json;
 torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
     tensor = nn::functional::interpolate(tensor,
-        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kNearest));
+        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear));
 
     tensor = tensor.mul(255).clamp(0,255).to(torch::kU8);
 
