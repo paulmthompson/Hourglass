@@ -20,50 +20,6 @@ using json = nlohmann::json;
 
 #pragma once
 
-torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
-
-    tensor = nn::functional::interpolate(tensor,
-        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear).align_corners(false));
-
-    tensor = tensor.mul(255).clamp(0,255).to(torch::kU8);
-
-    tensor = tensor.detach().permute({2,3,1,0});
-        
-    return tensor.to(kCPU);
-}
-
-torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
-    auto output = hourglass->forward(data);
-
-
-    torch::Tensor prediction = output.back();
-        
-    return prepare_for_opencv(prediction,height, width);
-}
-//This isn't quite right because I need to scale the other pixels 
-cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
-    
-    cv::Mat color_img;
-    cv::Mat color_label;
-
-    cv::Mat channel[3];
-    cv::Mat dst;
-
-    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
-    cv::cvtColor(label,color_label,cv::COLOR_GRAY2RGB);
-
-    cv::split(color_label,channel);
-
-    channel[0] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
-    channel[1] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
-
-    cv::merge(channel,3,color_label);
-
-    cv::addWeighted(color_label,0.5, color_img,0.5,0.0,dst);
-
-    return dst;
-}
-
 /////////////////////////////////////////////////////////////////////////////////
 
 class prediction_options {
@@ -133,7 +89,6 @@ public:
                 }
             }
         }
-
     }
 
     void update_total_images(const int num) {
@@ -162,6 +117,67 @@ public:
     std::vector<LABEL_TYPE> label_types;
 private:
     
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+
+torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
+
+    tensor = nn::functional::interpolate(tensor,
+        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear).align_corners(false));
+
+    tensor = tensor.mul(255).clamp(0,255).to(torch::kU8);
+
+    tensor = tensor.detach().permute({2,3,1,0});
+        
+    return tensor.to(kCPU);
+}
+
+torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
+    auto output = hourglass->forward(data);
+
+
+    torch::Tensor prediction = output.back();
+        
+    return prepare_for_opencv(prediction,height, width);
+}
+//This isn't quite right because I need to scale the other pixels 
+cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
+    
+    cv::Mat color_img;
+    cv::Mat color_label;
+
+    cv::Mat channel[3];
+    cv::Mat dst;
+
+    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
+    cv::cvtColor(label,color_label,cv::COLOR_GRAY2RGB);
+
+    cv::split(color_label,channel);
+
+    channel[0] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
+    channel[1] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
+
+    cv::merge(channel,3,color_label);
+
+    cv::addWeighted(color_label,0.5, color_img,0.5,0.0,dst);
+
+    return dst;
+}
+
+void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
+
+    float thres = 0.1 * 255;
+
+    for (int j = 0; j < pred.size(3); j++) {
+
+        auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
+        if (torch::any(my_slice.greater(thres)).item().toBool()) {
+            //std::cout << "Tongue detected at " << frame_index + j << std::endl;
+            save.save_frame(my_slice,frame_index + j,thres);
+        }
+    }
 };
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -241,20 +257,6 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << std::endl;
     std::cout << total_images << " images predicted in " << elapsed.count() << " seconds" << std::endl;
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
-};
-
-void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
-
-    float thres = 0.1 * 255;
-
-    for (int j = 0; j < pred.size(3); j++) {
-
-        auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
-        if (torch::any(my_slice.greater(thres)).item().toBool()) {
-            //std::cout << "Tongue detected at " << frame_index + j << std::endl;
-            save.save_frame(my_slice,frame_index + j,thres);
-        }
-    }
 };
 
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
