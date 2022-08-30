@@ -47,12 +47,14 @@ public:
             }
         }
     }
-    void save_keypoint(const torch::Tensor & pred_frame, const int frame_index, const float thres)
+    void init_keypoint() {
+        this->x_pos.push_back({});
+        this->y_pos.push_back({});
+        this->prob.push_back({});
+    }
+    void save_keypoint(const torch::Tensor & pred_frame, const int frame_index, int x, int y)
     {
         this->frame.push_back(frame_index);
-
-
-
     }
     void write(std::string &path)
     {
