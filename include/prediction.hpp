@@ -14,6 +14,7 @@
 #include <fstream>
 #include <chrono>  // for high_resolution_clock
 #include <memory>
+#include <array>
 
 using namespace torch;
 using json = nlohmann::json;
@@ -89,6 +90,11 @@ public:
                 }
             }
         }
+        this->label_colors = std::vector<std::array<bool,3>>(output_dims,std::array<bool,3>{false,false,true});
+        if (output_dims > 1) {
+            this->label_colors[1] = {false,true,false};
+        }
+
     }
 
     void update_total_images(const int num) {
@@ -115,6 +121,7 @@ public:
     int batch_size;
     int64_t total_images;
     std::vector<LABEL_TYPE> label_types;
+    std::vector<std::array<bool,3>> label_colors;
 private:
     
 };
@@ -143,7 +150,8 @@ torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tens
     return prepare_for_opencv(prediction,height, width);
 }
 //This isn't quite right because I need to scale the other pixels 
-cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
+cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
+                        const std::array<bool,3> color = {false, false, true}) {
     
     cv::Mat color_img;
     cv::Mat color_label;
@@ -156,8 +164,11 @@ cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
 
     cv::split(color_label,channel);
 
-    channel[0] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
-    channel[1] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1);
+    for (int i = 0; i < 3; i++) {
+        if (!color[i]) {
+            channel[i] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
+        }
+    }
 
     cv::merge(channel,3,color_label);
 
@@ -330,7 +341,11 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
         data = data.to(device);
 
         data = nn::functional::interpolate(data,
-            nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({256,256})).mode(torch::kNearest));
+            nn::functional::InterpolateFuncOptions()
+            .size(std::vector<int64_t>({256,256}))
+            .mode(torch::kBilinear)
+            .antialias(true)
+            .align_corners(false));
 
         auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
 
@@ -359,13 +374,13 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
                 for (int k = 0; k < output_channels; k++) {
 
-                    cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*j));
+                    cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*label_to_read));
                     
-                    cv::Mat overlayImg = combine_overlay(realImg,resultImg);
+                    cv::Mat overlayImg = combine_overlay(realImg,resultImg,options.label_colors[k]);
             
                     if (options.save_images) {
 
-                        std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                        std::string img_name = "test" + std::to_string(frame_index + j) + "_" + std::to_string(k) + ".png";
                         cv::imwrite(img_name,overlayImg);
                     
                     } else if (options.save_video) {
@@ -374,7 +389,6 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                         cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
                         std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
                         ve.writeFrameRGB0(save_frame);
-
                     }
                     label_to_read += 1;
                 }
