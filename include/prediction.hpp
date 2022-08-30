@@ -23,7 +23,7 @@ using json = nlohmann::json;
 torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
     tensor = nn::functional::interpolate(tensor,
-        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear));
+        nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear).align_corners(false));
 
     tensor = tensor.mul(255).clamp(0,255).to(torch::kU8);
 
@@ -63,6 +63,8 @@ cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label) {
 
     return dst;
 }
+
+/////////////////////////////////////////////////////////////////////////////////
 
 class prediction_options {
 public:
@@ -116,6 +118,22 @@ public:
             this->total_images = data["prediction"]["end_frame"];
         }
 
+        const int output_dims = data["hourglass"]["output-dimensions"];
+
+        this->label_types = std::vector<LABEL_TYPE>(output_dims,LABEL_TYPE::MASK);
+        if (data["hourglass"]["output-type"]) {
+            for (int i=0; i< output_dims; i++) {
+                std::string label_type = data["hourglass"]["output-type"][i];
+                if (label_type.compare("mask") == 0) {
+                    this->label_types[i] = LABEL_TYPE::MASK;
+                } else if (label_type.compare("pixel")) {
+                    this->label_types[i] = LABEL_TYPE::PIXEL;
+                } else {
+                    std::cout << "Do not recognize output type specified" << std::endl;
+                }
+            }
+        }
+
     }
 
     void update_total_images(const int num) {
@@ -141,9 +159,12 @@ public:
     int64_t starting_frame;
     int batch_size;
     int64_t total_images;
+    std::vector<LABEL_TYPE> label_types;
 private:
     
 };
+
+/////////////////////////////////////////////////////////////////////////////////
 
 template <class T>
 void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
@@ -229,7 +250,6 @@ void get_data_to_save(const torch::Tensor& pred, save_structure& save,const int 
     for (int j = 0; j < pred.size(3); j++) {
 
         auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
-
         if (torch::any(my_slice.greater(thres)).item().toBool()) {
             //std::cout << "Tongue detected at " << frame_index + j << std::endl;
             save.save_frame(my_slice,frame_index + j,thres);
@@ -298,7 +318,11 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         if (options.save_hdf5) {
             for (int i = 0; i < output_channels; i ++ ) {
-                get_data_to_save(prediction,save_output[i],frame_index,i);
+                if (options.label_types[i] == LABEL_TYPE::MASK) {
+                    get_data_to_save(prediction,save_output[i],frame_index,i);
+                } else if (options.label_types[i] == LABEL_TYPE::PIXEL) {
+
+                }
             }
         }
 

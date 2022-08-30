@@ -72,7 +72,7 @@ cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) 
         image_out = image_out.clone(); 
     }
 
-    imwrite("test.png",image_out);
+    //imwrite("test.png",image_out);
 
     return image_out;
 }

@@ -23,6 +23,7 @@ add_executable(Hourglass hourglass.cpp
   include/augmentation.hpp
   include/prediction.hpp
   include/saveload.hpp
+  include/subpixel.hpp
   )
 
 if( OpenCV_FOUND )

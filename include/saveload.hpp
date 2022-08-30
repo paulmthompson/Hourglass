@@ -47,6 +47,13 @@ public:
             }
         }
     }
+    void save_keypoint(const torch::Tensor & pred_frame, const int frame_index, const float thres)
+    {
+        this->frame.push_back(frame_index);
+
+
+
+    }
     void write(std::string &path)
     {
 
