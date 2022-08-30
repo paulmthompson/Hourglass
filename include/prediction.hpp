@@ -188,8 +188,9 @@ void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,cons
     for (int j = 0; j < pred.size(3); j++) {
 
         auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
+        auto ind = my_slice.argmax().item().toLong();
 
-        save.save_keypoint(my_slice,frame_index + j,1,1);
+        save.save_keypoint(my_slice,frame_index + j,ind);
     }
 };
 
@@ -339,7 +340,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                 if (options.label_types[i] == LABEL_TYPE::MASK) {
                     get_data_to_save_mask(prediction,save_output[i],frame_index,i);
                 } else if (options.label_types[i] == LABEL_TYPE::PIXEL) {
-
+                    get_data_to_save_pixel(prediction,save_output[i],frame_index,i);
                 }
             }
         }

@@ -52,9 +52,11 @@ public:
         this->y_pos.push_back({});
         this->prob.push_back({});
     }
-    void save_keypoint(const torch::Tensor & pred_frame, const int frame_index, int x, int y)
+    void save_keypoint(const torch::Tensor & pred_frame, const int frame_index, int i)
     {
         this->frame.push_back(frame_index);
+        this->x_pos.back().push_back(i / this->y_dim);
+        this->y_pos.back().push_back(i % this->y_dim);
     }
     void write(std::string &path)
     {
