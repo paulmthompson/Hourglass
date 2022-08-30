@@ -246,6 +246,8 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     json data = json::parse(f);
     f.close();
 
+    std::filesystem::create_directory("images");
+
     hourglass->to(device);
 
     int batch_size = data["prediction"]["batch-size"];
@@ -291,7 +293,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
                 resultImg = combine_overlay(realImg,resultImg);
 
-                std::string img_name = "test" + std::to_string(img_num) + "_" + std::to_string(k) + ".png";
+                std::string img_name = "images/test" + std::to_string(img_num) + "_" + std::to_string(k) + ".png";
                 cv::imwrite(img_name,resultImg);
 
                 label_to_read += 1;
@@ -320,6 +322,8 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
     auto options = prediction_options(config_file);
     
+    std::filesystem::create_directory("images");
+
     hourglass->to(device);
 
     auto vd = ffmpeg_wrapper::VideoDecoder();
@@ -412,7 +416,7 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
             
                 if (options.save_images) {
 
-                    std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                    std::string img_name = "images/test" + std::to_string(frame_index + j) + ".png";
                     cv::imwrite(img_name,overlayImg);
                     
                 } else if (options.save_video) {
