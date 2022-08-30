@@ -177,6 +177,34 @@ cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
     return dst;
 }
 
+cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
+                        const std::vector<std::array<bool,3>>& colors) {
+    
+    cv::Mat color_img;
+    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
+    
+    for (int j=0; j< labels.size(); j++) {
+
+        cv::Mat color_label;
+        cv::Mat channel[3];
+    
+        cv::cvtColor(labels[j],color_label,cv::COLOR_GRAY2RGB);
+
+        cv::split(color_label,channel);
+
+        for (int i = 0; i < 3; i++) {
+            if (!colors[j][i]) {
+                channel[i] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
+            }
+        }
+
+        cv::merge(channel,3,color_label);
+
+        cv::addWeighted(color_label,0.5, color_img,0.5,0.0,color_img);
+    }
+    return color_img;
+}
+
 void get_data_to_save_mask(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
 
     float thres = 0.1 * 255;
@@ -371,26 +399,28 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
             for (int j = 0; j < prediction.size(3); j++) {
 
                 cv::Mat realImg(out_height, out_width, CV_8UC1, data_raw_data_ptr + (out_height*out_width*j));
+                std::vector<cv::Mat> resultImg;
 
                 for (int k = 0; k < output_channels; k++) {
 
-                    cv::Mat resultImg(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*label_to_read));
+                    resultImg.push_back(cv::Mat(out_height,out_width,CV_8UC1, prediction_raw_data_ptr + (out_height*out_width*label_to_read)));
                     
-                    cv::Mat overlayImg = combine_overlay(realImg,resultImg,options.label_colors[k]);
-            
-                    if (options.save_images) {
-
-                        std::string img_name = "test" + std::to_string(frame_index + j) + "_" + std::to_string(k) + ".png";
-                        cv::imwrite(img_name,overlayImg);
-                    
-                    } else if (options.save_video) {
-
-                        cv::Mat overlayImg2;
-                        cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
-                        std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
-                        ve.writeFrameRGB0(save_frame);
-                    }
                     label_to_read += 1;
+                }
+
+                cv::Mat overlayImg = combine_overlay(realImg,resultImg,options.label_colors);
+            
+                if (options.save_images) {
+
+                    std::string img_name = "test" + std::to_string(frame_index + j) + ".png";
+                    cv::imwrite(img_name,overlayImg);
+                    
+                } else if (options.save_video) {
+
+                    cv::Mat overlayImg2;
+                    cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel
+                    std::memcpy(&save_frame.data()[0], reinterpret_cast<void*>(overlayImg2.data), out_height*out_width * sizeof(uint32_t));
+                    ve.writeFrameRGB0(save_frame);
                 }
             }
         }
