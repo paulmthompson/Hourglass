@@ -189,8 +189,9 @@ void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,cons
 
         auto my_slice = pred.index({torch::indexing::Slice(),torch::indexing::Slice(),channel_index,j});
         auto ind = my_slice.argmax().item().toLong();
+        auto prob = my_slice.max().item().toFloat();
 
-        save.save_keypoint(my_slice,frame_index + j,ind);
+        save.save_keypoint(my_slice,frame_index + j,ind,prob);
     }
 };
 
