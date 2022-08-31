@@ -30,39 +30,28 @@ void write_loss(std::vector<float> loss) {
 };
 
 template <class T>
-void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
+void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, training_options& options)
 {
 
-    std::ifstream f(config_file);
-    json data = json::parse(f);
-    f.close();
-
     hourglass->to(device);
-
     hourglass->train();
 
-    int batch_size = data["training"]["batch-size"];
-    int kNumberOfEpochs = data["training"]["epochs"];
-    const int64_t batches_per_epoch = std::ceil(data_set.size().value() / static_cast<double>(batch_size));
+    const int64_t batches_per_epoch = std::ceil(data_set.size().value() / static_cast<double>(options.batch_size));
 
     auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
         std::move(data_set),
-        batch_size);
+        options.batch_size);
 
     std::vector<float> all_losses;
 
-    float learning_rate = 2e-4;
-    if (data["training"].contains("learning-rate")) {
-        learning_rate = data["training"]["learning-rate"];
-    }
     torch::optim::Adam optimizer(
-        hourglass->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(5e-4));
+        hourglass->parameters(), torch::optim::AdamOptions(options.learning_rate).weight_decay(5e-4));
 
-    load_weights(hourglass,config_file);
+    load_weights(hourglass,options.config_file);
 
-    std::cout << "Beginning Training for " << kNumberOfEpochs << " Epochs" << std::endl;
+    std::cout << "Beginning Training for " << options.epochs << " Epochs" << std::endl;
 
-    for (int64_t epoch = 1; epoch <= kNumberOfEpochs; ++epoch)
+    for (int64_t epoch = 1; epoch <= options.epochs; ++epoch)
     {
         int64_t batch_index = 0;
         for (auto &batch : *data_loader)
@@ -97,13 +86,13 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
             std::cout << "\r"
                          "["
-                      << epoch << "/" << kNumberOfEpochs << "]"
+                      << epoch << "/" << options.epochs << "]"
                       << "[" << ++batch_index << "/" << batches_per_epoch << "]"
                       << " loss: " << loss.item<float>() << std::flush;
         }
     }
 
-    torch::save(hourglass, data["training"]["save-name"]);
+    torch::save(hourglass, options.weight_save_name);
     torch::save(optimizer, "hourglass-optimizer.pt");
 
     write_loss(all_losses);

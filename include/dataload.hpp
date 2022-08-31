@@ -178,6 +178,10 @@ public:
         if (data["training"].contains("keypoint-radius")) {
             this->keypoint_radius = data["training"]["keypoint-radius"];
         }
+        this->weight_save_name = "hourglass_weights.pt";
+        if (data["training"].contains("save-name")) {
+            this->weight_save_name = data["training"]["save-name"];
+        }
 
         this->config_file = config_file;
     }
@@ -188,6 +192,7 @@ public:
     bool image_augmentation;
     std::string config_file;
     int keypoint_radius;
+    std::string weight_save_name;
 private:
     
 };

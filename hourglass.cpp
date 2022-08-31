@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
       auto training_opts = training_options(config_file);
 
       auto data_set = MyDataset(training_opts).map(torch::data::transforms::Stack<>());
-      train_hourglass(hourglass,data_set,device,config_file);
+      train_hourglass(hourglass,data_set,device,training_opts);
 
       training_opts.image_augmentation = false;
       data_set = MyDataset(training_opts).map(torch::data::transforms::Stack<>());
