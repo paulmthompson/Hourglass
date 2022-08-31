@@ -241,6 +241,7 @@ template <class T>
 void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
 {
     torch::NoGradGuard no_grad; // Turn off autograd for inference
+    hourglass->eval();
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -319,6 +320,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
     torch::NoGradGuard no_grad; // Turn off autograd for inference
+    hourglass->eval();
 
     auto options = prediction_options(config_file);
     
@@ -419,7 +421,8 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
                     std::string img_name = "images/test" + std::to_string(frame_index + j) + ".png";
                     cv::imwrite(img_name,overlayImg);
                     
-                } else if (options.save_video) {
+                } 
+                if (options.save_video) {
 
                     cv::Mat overlayImg2;
                     cv::cvtColor(overlayImg,overlayImg2,cv::COLOR_RGB2BGRA); // Puts intensity in the red channel

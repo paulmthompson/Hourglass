@@ -39,6 +39,8 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
     hourglass->to(device);
 
+    hourglass->train();
+
     int batch_size = data["training"]["batch-size"];
     int kNumberOfEpochs = data["training"]["epochs"];
     const int64_t batches_per_epoch = std::ceil(data_set.size().value() / static_cast<double>(batch_size));
@@ -54,7 +56,7 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
         learning_rate = data["training"]["learning-rate"];
     }
     torch::optim::Adam optimizer(
-        hourglass->parameters(), torch::optim::AdamOptions(learning_rate));
+        hourglass->parameters(), torch::optim::AdamOptions(learning_rate).weight_decay(5e-4));
 
     load_weights(hourglass,config_file);
 
