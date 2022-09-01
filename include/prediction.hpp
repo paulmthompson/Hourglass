@@ -95,6 +95,15 @@ public:
             this->label_colors[1] = {false,true,false};
         }
 
+        this->load_weights = false;
+        if (data["prediction"]["load-weights"].contains("load")) {
+            this->load_weights = data["prediction"]["load-weights"]["load"];
+        }
+        this->load_weight_path = "hourglass_weights.pt";
+        if (data["prediction"]["load-weights"].contains("path")) {
+            this->load_weight_path = data["prediction"]["load-weights"]["path"];
+        }
+
     }
 
     void update_total_images(const int num) {
@@ -122,6 +131,8 @@ public:
     int64_t total_images;
     std::vector<LABEL_TYPE> label_types;
     std::vector<std::array<bool,3>> label_colors;
+    bool load_weights;
+    std::string load_weight_path;
 private:
     
 };
@@ -240,16 +251,16 @@ void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,cons
 template <class T>
 void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
 {
+
     torch::NoGradGuard no_grad; // Turn off autograd for inference
     hourglass->eval();
+    hourglass->to(device);
 
     std::ifstream f(config_file);
     json data = json::parse(f);
     f.close();
 
     std::filesystem::create_directory("images");
-
-    hourglass->to(device);
 
     int batch_size = data["prediction"]["batch-size"];
     const int64_t batches_per_epoch = std::ceil(data_set.size().value() / static_cast<double>(batch_size));
@@ -258,8 +269,6 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     auto data_loader = torch::data::make_data_loader<torch::data::samplers::SequentialSampler>(
         std::move(data_set),
         batch_size);
-
-    load_weights(hourglass,config_file);
 
     const int out_height = 256;
     const int out_width = 256;
@@ -319,14 +328,17 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
 void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
-    torch::NoGradGuard no_grad; // Turn off autograd for inference
-    hourglass->eval();
-
     auto options = prediction_options(config_file);
     
-    std::filesystem::create_directory("images");
+    if (options.load_weights) {
+        load_weights(hourglass,options.load_weight_path);
+    }
 
+    torch::NoGradGuard no_grad; // Turn off autograd for inference
+    hourglass->eval();
     hourglass->to(device);
+    
+    std::filesystem::create_directory("images");
 
     auto vd = ffmpeg_wrapper::VideoDecoder();
     auto ve = ffmpeg_wrapper::VideoEncoder();
@@ -336,8 +348,6 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
     const int64_t batches_per_epoch = std::ceil(options.total_images / static_cast<double>(options.batch_size));
     
-    load_weights(hourglass,config_file);
-
     const int out_height = vd.getHeight();
     const int out_width = vd.getWidth();
 

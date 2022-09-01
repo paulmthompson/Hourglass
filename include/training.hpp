@@ -29,10 +29,30 @@ void write_loss(std::vector<float> loss) {
 
 };
 
+torch::Tensor intermediate_supervision(const std::vector<torch::Tensor>& output,const torch::Tensor& labels) {
+    
+    std::vector<torch::Tensor> losses;
+
+    for (auto &level_output : output)
+    {
+        losses.push_back(torch::mse_loss(level_output, labels));
+    }
+
+    torch::Tensor loss = losses[0];
+    for (int i = 1; i < losses.size(); i++)
+    {
+        loss += losses[i];
+    }
+
+    return loss;
+};
+
 template <class T>
 void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, training_options& options)
 {
-
+    if (options.load_weights) {
+        load_weights(hourglass,options.load_weight_path);
+    }
     hourglass->to(device);
     hourglass->train();
 
@@ -46,8 +66,6 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
     torch::optim::Adam optimizer(
         hourglass->parameters(), torch::optim::AdamOptions(options.learning_rate).weight_decay(5e-4));
-
-    load_weights(hourglass,options.config_file);
 
     std::cout << "Beginning Training for " << options.epochs << " Epochs" << std::endl;
 
@@ -67,15 +85,11 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
 
             auto output = hourglass->forward(data);
             
-            std::vector<torch::Tensor> losses;
-            for (auto &level_output : output)
-            {
-                losses.push_back(torch::mse_loss(level_output, labels));
-            }
-            torch::Tensor loss = losses[0];
-            for (int i = 1; i < losses.size(); i++)
-            {
-                loss += losses[i];
+            torch::Tensor loss;
+            if (options.intermediate_supervision) {
+                loss = intermediate_supervision(output,labels);
+            } else {
+                loss = torch::mse_loss(output.back(), labels);
             }
 
             loss.backward();

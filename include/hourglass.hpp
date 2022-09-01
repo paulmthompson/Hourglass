@@ -273,15 +273,9 @@ StackedHourglass createHourglass(const std::string& config_file) {
     return hourglass;
 }
 
-void load_weights(StackedHourglass& hourglass, const std::string& config_file) {
+void load_weights(StackedHourglass& hourglass, const std::string& weight_name) {
 
-  std::ifstream f(config_file);
-  json data = json::parse(f);
-  f.close();
-
-  if (data["training"]["load-weights"]["load"]) 
-  {
-    std::filesystem::path weight_path = data["training"]["load-weights"]["path"];
+    std::filesystem::path weight_path = weight_name;
     if (std::filesystem::exists(weight_path)) {
         try
         {
@@ -296,5 +290,5 @@ void load_weights(StackedHourglass& hourglass, const std::string& config_file) {
     } else {
     std::cout << "Could not load previous weights at path: " << weight_path.string() << std::endl;
     }
-  }
+
 }
