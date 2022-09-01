@@ -153,8 +153,7 @@ torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const in
 }
 
 torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
-    auto output = hourglass->forward(data);
-
+    std::vector<torch::Tensor> output = hourglass->forward(data);
 
     torch::Tensor prediction = output.back();
         
@@ -277,6 +276,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
 
     const auto output_channels = hourglass->get_output_dims();
 
+    float loss = 0.0;
     int64_t batch_index = 0;
     int64_t img_num = 0;
     for (auto &batch : *data_loader)

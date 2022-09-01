@@ -270,15 +270,22 @@ StackedHourglass createHourglass(const std::string& config_file) {
 
     StackedHourglass hourglass(stacks,channels,output_dimensions,input_dimensions);
 
+    hourglass->to(kFloat32);
+
     return hourglass;
 }
 
 void load_weights(StackedHourglass& hourglass, const std::string& weight_name) {
 
+    //https://discuss.pytorch.org/t/after-torch-load-model-and-predict-then-got-nan/133142/6
+    hourglass->to(kFloat32); // Make sure we are in float 32
+    hourglass->to(torch::Device(torch::kCPU));
+
     std::filesystem::path weight_path = weight_name;
     if (std::filesystem::exists(weight_path)) {
         try
         {
+            
             torch::load(hourglass,weight_path);
             std::cout << "Weights loaded" << std::endl;
         }

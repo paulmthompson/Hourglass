@@ -29,7 +29,7 @@ void write_loss(std::vector<float> loss) {
 
 };
 
-torch::Tensor intermediate_supervision(const std::vector<torch::Tensor>& output,const torch::Tensor& labels) {
+torch::Tensor intermediate_supervision(std::vector<torch::Tensor>& output, torch::Tensor& labels) {
     
     std::vector<torch::Tensor> losses;
 
@@ -72,13 +72,12 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
     for (int64_t epoch = 1; epoch <= options.epochs; ++epoch)
     {
         int64_t batch_index = 0;
+
         for (auto &batch : *data_loader)
         {
-            try {
-                hourglass->zero_grad();
-            } catch (const c10::Error &e) {
-                std::cout << e.msg() << std::endl;
-            }
+            torch::AutoGradMode enable_grad(true);
+
+            hourglass->zero_grad();
 
             auto data = batch.data.to(device);
             auto labels = batch.target.to(device);
@@ -106,6 +105,8 @@ void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device dev
         }
     }
 
+    hourglass->to(kFloat32);
+    hourglass->to(torch::Device(torch::kCPU));
     torch::save(hourglass, options.weight_save_name);
     torch::save(optimizer, "hourglass-optimizer.pt");
 

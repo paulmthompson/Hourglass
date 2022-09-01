@@ -51,9 +51,11 @@ int main(int argc, char** argv) {
 
       training_opts.image_augmentation = false;
       data_set = MyDataset(training_opts).map(torch::data::transforms::Stack<>());
+      
       //Recreate hourglass?
-
+      hourglass = createHourglass(config_file);
       load_weights(hourglass,training_opts.weight_save_name);
+
       predict(hourglass,data_set,device,config_file);
     }
 
