@@ -384,14 +384,14 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
 
         data = data.to(device);
 
-        data = nn::functional::interpolate(data,
+        auto data_input = nn::functional::interpolate(data,
             nn::functional::InterpolateFuncOptions()
             .size(std::vector<int64_t>({256,256}))
             .mode(torch::kBilinear)
             .antialias(true)
             .align_corners(false));
 
-        auto prediction = get_hourglass_predictions(hourglass,data,out_height,out_width);
+        auto prediction = get_hourglass_predictions(hourglass,data_input,out_height,out_width);
 
         auto prediction_raw_data_ptr = prediction.data_ptr<uchar>();
 
