@@ -335,7 +335,7 @@ add_image_to_load(const std::filesystem::path& folder_path, const json& json_fil
 
                 // Here we remove the image name prefix so that it is just a number.
                 std::string image_name = std::regex_replace(entry.path().stem().string(), image_regex, "");
-                out_images[image_name]=name_and_path(image_name,image_file_path);
+                out_images[image_name] = name_and_path(image_name,image_file_path);
             }
         }
     }
@@ -367,7 +367,7 @@ add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& i
         int x = label["labels"][label_name][0]; // X
         int y = label["labels"][label_name][1]; // Y
 
-        out_images[img_name]=name_and_path(img_name2,x,y);
+        out_images[img_name.string()] = name_and_path(img_name2,x,y);
     }
     
     

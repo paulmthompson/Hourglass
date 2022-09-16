@@ -7,6 +7,7 @@
  #include <vector>
  #include <string>
  #include <iostream>
+ #include <filesystem>
 
  using namespace torch;
  using json = nlohmann::json;
@@ -286,7 +287,7 @@ void load_weights(StackedHourglass& hourglass, const std::string& weight_name) {
         try
         {
             
-            torch::load(hourglass,weight_path);
+            torch::load(hourglass,weight_path.string());
             std::cout << "Weights loaded" << std::endl;
         }
         catch (const c10::Error &e)
