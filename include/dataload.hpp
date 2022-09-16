@@ -52,8 +52,12 @@ cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) 
     }
 
     cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_32FC1);
-    float & point = raw_image.at<float>(y,x);
-    point = 255.0;
+    if ((x >= 0) & (y >= 0)) {
+        float & point = raw_image.at<float>(y,x);
+        point = 255.0;
+    } else {
+        std::cout << "No label for this image" << std::endl;
+    }
 
     cv::Mat raw_image2;
     cv::GaussianBlur(raw_image, raw_image2, cv::Size(rad,rad), 0);
@@ -364,9 +368,14 @@ add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& i
     for (const auto& label : data) {
         fs::path img_name = label["image"];
         std::string img_name2 = std::regex_replace(img_name.stem().string(), image_regex, "");
-        int x = label["labels"][label_name][0]; // X
-        int y = label["labels"][label_name][1]; // Y
-
+        int x, y;
+        if (label["labels"][label_name].size() > 0) {
+            x = label["labels"][label_name][0]; // X
+            y = label["labels"][label_name][1]; // Y
+        } else {
+            x = -1;
+            y = -1;
+        }
         out_images[img_name]=name_and_path(img_name2,x,y);
     }
     
