@@ -284,7 +284,7 @@ std::optional<std::string> match_folder_in_path(const fs::path& dir_path,std::st
     return std::nullopt;
 };
 
-std::filesystem::path generate_output_path_from_json(const std::filesystem::path& folder_path, const json& subpaths_json) {
+std::optional<std::filesystem::path> generate_output_path_from_json(const std::filesystem::path& folder_path, const json& subpaths_json) {
 
     std::filesystem::path output_path = folder_path;
 
@@ -292,6 +292,9 @@ std::filesystem::path generate_output_path_from_json(const std::filesystem::path
         std::optional<std::string> matched_folder = match_folder_in_path(output_path,sub_path);
         if (matched_folder) {
             output_path /= matched_folder.value();
+        } else {
+            std::cout << "Did not find sub_path " << sub_path << std::endl;
+            return std::nullopt;
         }
     }
     return output_path;
@@ -530,15 +533,23 @@ std::vector<img_label_pair> read_json_file(training_options& opts) {
 
             auto img_folder_path = generate_output_path_from_json(experiment_path, this_view["prefix"]);
 
+            if (!img_folder_path.has_value()) {
+                continue;
+            }
+
             //The paths to all of our images will be found.
-            auto this_view_images = add_image_to_load(img_folder_path,data["images"]["filetypes"],data["images"]["name_prefix"]);
+            auto this_view_images = add_image_to_load(img_folder_path.value(),data["images"]["filetypes"],data["images"]["name_prefix"]);
 
             //Our labels are located in this directory (or subdirects of this directory)
             auto label_folder_path = generate_output_path_from_json(experiment_path, this_view["label_prefix"]);
 
+            if (!label_folder_path.has_value()) {
+                continue;
+            }
+
             // Our labels can be masks corresponding to each image, or points (which we will generate masks from)
             // image type should be directed to folders
-            std::filesystem::path this_label_folder_path = label_folder_path;
+            std::filesystem::path this_label_folder_path = label_folder_path.value();
 
             std::vector<std::unordered_map<std::string, name_and_path>> view_labels;
 
@@ -547,7 +558,7 @@ std::vector<img_label_pair> read_json_file(training_options& opts) {
                 std::string label_name = data["labels"]["labels"][i]["name"];
                 std::string label_type = data["labels"]["labels"][i]["type"];
 
-                auto this_label_folder_path = label_folder_path / label_name;
+                auto this_label_folder_path = label_folder_path.value() / label_name;
                 
                 auto this_view_labels = get_labels_name_and_path(this_label_folder_path,
                                                 label_name, 
