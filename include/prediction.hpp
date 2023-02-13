@@ -15,6 +15,8 @@
 #include <chrono>  // for high_resolution_clock
 #include <memory>
 #include <array>
+#include <filesystem>
+#include <cstdlib>
 
 using namespace torch;
 using json = nlohmann::json;
@@ -343,6 +345,12 @@ void predict_video(StackedHourglass &hourglass, torch::Device device, const std:
     auto vd = ffmpeg_wrapper::VideoDecoder();
     auto ve = ffmpeg_wrapper::VideoEncoder();
      
+    if (!std::filesystem::exists(options.vid_name)) {
+        std::cout << "Can not find video file. Is the file path correct?" << std::endl;
+        std::cout << "Aborting Prediction" << std::endl;
+        std::exit(1);
+    }
+
     vd.createMedia(options.vid_name);
     options.update_total_images(vd.getFrameCount());
 
