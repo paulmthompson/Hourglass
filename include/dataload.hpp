@@ -27,7 +27,7 @@ using paths = std::vector<std::filesystem::path>;
 #pragma once
 
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
+inline cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
     if (!fs::exists(image_path)) {
         std::cout << "File path does not exist at " << image_path.string() << std::endl;
     }
@@ -42,7 +42,7 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
     return image;
 };
 
-cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) {
+inline cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) {
     
     int img_w = 640;
     int img_h = 480;
@@ -79,7 +79,7 @@ cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) 
     //imwrite("test.png",image_out);
 
     return image_out;
-}
+};
 
 /////////////////////////////////////////////////////////////////////////////////
 class label_path {
@@ -222,13 +222,13 @@ private:
 
 /////////////////////////////////////////////////////////////////////////////////
 
-torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
+inline torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
 
     return stacked.to(torch::kFloat32).div(255);
 }
 
-torch::Tensor LoadFrame(ffmpeg_wrapper::VideoDecoder& vd, int frame_id) {
+inline torch::Tensor LoadFrame(ffmpeg_wrapper::VideoDecoder& vd, int frame_id) {
 
     std::vector<uint8_t> image = vd.getFrame(frame_id, true);
 
@@ -247,7 +247,7 @@ torch::Tensor LoadFrame(ffmpeg_wrapper::VideoDecoder& vd, int frame_id) {
     return tensor.permute({2,0,1});
 }
 
-torch::Tensor LoadFrames(ffmpeg_wrapper::VideoDecoder& vd, int frame_start, int frame_end) {
+inline torch::Tensor LoadFrames(ffmpeg_wrapper::VideoDecoder& vd, int frame_start, int frame_end) {
 
     std::vector<torch::Tensor> frames;
 
@@ -261,7 +261,7 @@ torch::Tensor LoadFrames(ffmpeg_wrapper::VideoDecoder& vd, int frame_start, int 
 }
 
 template<typename T>
-void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
+inline void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
 
     int n = imgs.size();
     //https://www.techiedelight.com/shuffle-vector-cpp/
@@ -274,7 +274,7 @@ void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
 };
 
 //https://stackoverflow.com/questions/612097/how-can-i-get-the-list-of-files-in-a-directory-using-c-or-c
-std::optional<std::string> match_folder_in_path(const fs::path& dir_path,std::string folder_path) {
+inline std::optional<std::string> match_folder_in_path(const fs::path& dir_path,std::string folder_path) {
 
     for (const auto & entry : fs::directory_iterator(dir_path)) {
         if (entry.path().string().find(folder_path) != string::npos) {
@@ -284,7 +284,7 @@ std::optional<std::string> match_folder_in_path(const fs::path& dir_path,std::st
     return std::nullopt;
 };
 
-std::optional<std::filesystem::path> generate_output_path_from_json(const std::filesystem::path& folder_path, const json& subpaths_json) {
+inline std::optional<std::filesystem::path> generate_output_path_from_json(const std::filesystem::path& folder_path, const json& subpaths_json) {
 
     std::filesystem::path output_path = folder_path;
 
@@ -329,7 +329,7 @@ struct name_and_path {
 
 //I think this should be an unordered map
 
-std::unordered_map<std::string,name_and_path> 
+inline std::unordered_map<std::string,name_and_path> 
 add_image_to_load(const std::filesystem::path& folder_path, const json& json_filetypes, const json& json_prefix) {
     
     std::unordered_map<std::string,name_and_path> out_images;
@@ -350,7 +350,7 @@ add_image_to_load(const std::filesystem::path& folder_path, const json& json_fil
 };
 
 //Unordered map with image name as key
-std::unordered_map<std::string,name_and_path> 
+inline std::unordered_map<std::string,name_and_path> 
 add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& img_prefix, std::string label_name) {
     
     std::unordered_map<std::string,name_and_path> out_images;
@@ -389,7 +389,7 @@ add_pixels_to_load(const std::filesystem::path& folder_path,const std::string& i
 
 /////////////////////////////////////////////////////////////////////////////////
 
-torch::Tensor convert_to_tensor(cv::Mat& image) {
+inline torch::Tensor convert_to_tensor(cv::Mat& image) {
 
     auto tensor = torch::empty(
            { image.rows, image.cols, image.channels()},
@@ -403,7 +403,7 @@ torch::Tensor convert_to_tensor(cv::Mat& image) {
     return tensor.permute({2,0,1}); // Single image
 }
 
-std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
+inline std::tuple<int,int> get_width_height(const std::string& config_file, const std::string& keyword) {
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -415,7 +415,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 };
 
  //https://discuss.pytorch.org/t/libtorch-how-to-use-torch-datasets-for-custom-dataset/34221/2
- std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair>& image_paths, training_options& training_opts)
+ inline std::tuple<torch::Tensor,torch::Tensor> read_images(const std::vector<img_label_pair>& image_paths, training_options& training_opts)
  {
     auto [w_img, h_img] = get_width_height(training_opts.config_file,"images");
     auto [w_label, h_label] = get_width_height(training_opts.config_file,"labels");
@@ -464,7 +464,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
 
  /////////////////////////////////////////////////////////////////////////////////
 
- std::optional<std::unordered_map<std::string,name_and_path>> 
+ inline std::optional<std::unordered_map<std::string,name_and_path>> 
  get_labels_name_and_path(const fs::path& this_label_folder_path, 
                                                 const std::string& label_name, 
                                                 const std::string& label_type,
@@ -492,7 +492,7 @@ std::tuple<int,int> get_width_height(const std::string& config_file, const std::
     return this_view_labels;
  };
 
-void match_image_and_labels(std::vector<name_and_path>& this_view_images, 
+inline void match_image_and_labels(std::vector<name_and_path>& this_view_images, 
                             std::vector<name_and_path>& this_view_labels) {
 
     std::vector<img_label_pair> img_label_files;
@@ -510,7 +510,7 @@ void match_image_and_labels(std::vector<name_and_path>& this_view_images,
     }
 };
 
-std::vector<img_label_pair> read_json_file(training_options& opts) {
+inline std::vector<img_label_pair> read_json_file(training_options& opts) {
 
     std::ifstream f(opts.config_file);
     json data = json::parse(f);
@@ -629,11 +629,11 @@ std::vector<img_label_pair> read_json_file(training_options& opts) {
         torch::optional<size_t> size() const override;
 };
 
-torch::data::Example<> MyDataset::get(size_t index)
+inline torch::data::Example<> MyDataset::get(size_t index)
 {
     // You may for example also read in a .csv file that stores locations
     // to your data and then read in the data at this step. Be creative.
     return {states_[index], labels_[index]};
 };
 
-torch::optional<size_t> MyDataset::size() const { return states_.size(0); }
+inline torch::optional<size_t> MyDataset::size() const { return states_.size(0); }

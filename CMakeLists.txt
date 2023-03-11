@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 project(Hourglass)
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -26,6 +28,11 @@ add_executable(Hourglass hourglass.cpp
   include/subpixel.hpp
   )
 
+target_include_directories(Hourglass PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+)
+
 if( OpenCV_FOUND )
   # Additional Include Directories
   target_include_directories(Hourglass PRIVATE ${OpenCV_INCLUDE_DIRS} )
@@ -41,7 +48,7 @@ target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
 target_link_libraries(Hourglass PRIVATE PNG::PNG)
-target_link_libraries(Hourglass PUBLIC ffmpeg_wrapper::ffmpeg_wrapper)
+target_link_libraries(Hourglass PRIVATE ffmpeg_wrapper::ffmpeg_wrapper)
 target_link_libraries(Hourglass PRIVATE HighFive)
 target_link_libraries(Hourglass PRIVATE hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared hdf5::hdf5_hl_cpp-shared)
 

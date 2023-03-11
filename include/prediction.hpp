@@ -32,7 +32,7 @@ public:
         json data = json::parse(f);
         f.close();
 
-        this->vid_name = data["prediction"]["videos"];
+        this->vid_name = data["prediction"]["videos"]; // This should be made into an array of video properties that contain start frame and end frame
         std::cout << this->vid_name << std::endl;
 
         this->save_images = false;
@@ -142,7 +142,7 @@ private:
 /////////////////////////////////////////////////////////////////////////////////
 
 
-torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
+inline torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
     tensor = nn::functional::interpolate(tensor,
         nn::functional::InterpolateFuncOptions().size(std::vector<int64_t>({height,width})).mode(torch::kBilinear).align_corners(false));
@@ -154,7 +154,7 @@ torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const in
     return tensor.to(kCPU);
 }
 
-torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
+inline torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tensor& data,const int height, const int width) {
     std::vector<torch::Tensor> output = hourglass->forward(data);
 
     torch::Tensor prediction = output.back();
@@ -162,7 +162,7 @@ torch::Tensor get_hourglass_predictions(StackedHourglass &hourglass, torch::Tens
     return prepare_for_opencv(prediction,height, width);
 }
 //This isn't quite right because I need to scale the other pixels 
-cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
+inline cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
                         const std::array<bool,3> color = {false, false, true}) {
     
     cv::Mat color_img;
@@ -189,7 +189,7 @@ cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
     return dst;
 }
 
-cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
+inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
                         const std::vector<std::array<bool,3>>& colors) {
     
     cv::Mat color_img;
@@ -217,7 +217,7 @@ cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
     return color_img;
 }
 
-void get_data_to_save_mask(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
+inline void get_data_to_save_mask(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
 
     float thres = 0.1 * 255;
 
@@ -234,7 +234,7 @@ void get_data_to_save_mask(const torch::Tensor& pred, save_structure& save,const
 };
 
 
-void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
+inline void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
 
     for (int j = 0; j < pred.size(3); j++) {
 
@@ -250,7 +250,7 @@ void get_data_to_save_pixel(const torch::Tensor& pred, save_structure& save,cons
 /////////////////////////////////////////////////////////////////////////////////
 
 template <class T>
-void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
+inline void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, const std::string &config_file)
 {
 
     torch::NoGradGuard no_grad; // Turn off autograd for inference
@@ -328,7 +328,7 @@ void predict(StackedHourglass &hourglass, T &data_set, torch::Device device, con
     std::cout << "Average " << total_images / elapsed.count() << " images per second" << std::endl;
 };
 
-void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
+inline void predict_video(StackedHourglass &hourglass, torch::Device device, const std::string &config_file)
 {
     auto options = prediction_options(config_file);
     

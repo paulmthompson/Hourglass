@@ -30,18 +30,19 @@ int main(int argc, char** argv) {
   } else if (result.count("data")) {
 
     std::string config_file = result["data"].as<std::string>();
-
+    
     std::cout << "Configuration file is " << config_file << std::endl;
-
-    StackedHourglass hourglass = createHourglass(config_file);
-
+    
     torch::Device device(torch::kCPU);
 
     if (torch::cuda::is_available()) {
       std::cout << "CUDA is available! Using the GPU." << std::endl;
       device = torch::Device(torch::kCUDA);
     }
-
+    
+    StackedHourglass hourglass = createHourglass(config_file);
+    hourglass->to(kFloat32);
+    
     if (result["train"].as<bool>()) {
 
       auto training_opts = training_options(config_file);
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
       //predict(hourglass,data_set,device,config_file);
       predict_video(hourglass,device,config_file);
     }
-
+    
     exit(0);
   }
 

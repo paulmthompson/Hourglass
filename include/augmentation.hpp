@@ -15,7 +15,7 @@ using namespace cv;
 //Many strategies using OpenCv were adapted from this blog post
 //https://towardsdatascience.com/complete-image-augmentation-in-opencv-31a6b02694f5
 
-void flip_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
+inline void flip_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
                 const cv::Mat& input_image, const cv::Mat& input_label, const int flip_dir) {
 
     cv::Mat output_image = cv::Mat::zeros( input_image.size(), input_image.type() );
@@ -28,7 +28,7 @@ void flip_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& outp
     output_labels.push_back(std::move(output_label));
 };
 
-cv::Mat rotate_image(const cv::Mat& img, const int angle) {
+inline cv::Mat rotate_image(const cv::Mat& img, const int angle) {
 
     cv::Mat output_img = cv::Mat::zeros( img.size(), img.type() );
 
@@ -43,7 +43,7 @@ cv::Mat rotate_image(const cv::Mat& img, const int angle) {
     return output_img;
 };
 
-void rotate_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
+inline void rotate_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
                 const cv::Mat& input_image, const cv::Mat& input_label, const int angle) {
 
     output_images.push_back(rotate_image(input_image,angle));
@@ -52,7 +52,7 @@ void rotate_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& ou
 };
 
 //https://docs.opencv.org/3.4/d3/dc1/tutorial_basic_linear_transform.html
-cv::Mat contrast_adjust(const cv::Mat& image, const float alpha, const int beta) {
+inline cv::Mat contrast_adjust(const cv::Mat& image, const float alpha, const int beta) {
 
     cv::Mat new_image = cv::Mat::zeros( image.size(), image.type() );
 
@@ -61,14 +61,14 @@ cv::Mat contrast_adjust(const cv::Mat& image, const float alpha, const int beta)
     return new_image;
 }
 
-void contrast_adjust_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
+inline void contrast_adjust_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
                 const cv::Mat& input_image, const cv::Mat& input_label, const float alpha, const int beta) {
     
     output_images.push_back(contrast_adjust(input_image,alpha,beta));
     output_labels.push_back(input_label.clone());
 };
 
-cv::Mat horizontal_shift_image(const cv::Mat& image, const float ratio) { 
+inline cv::Mat horizontal_shift_image(const cv::Mat& image, const float ratio) { 
     cv::Mat new_image = cv::Mat::zeros( image.size(), image.type() );
 
     const int width = image.size().width;
@@ -85,14 +85,14 @@ cv::Mat horizontal_shift_image(const cv::Mat& image, const float ratio) {
     return new_image;
 };
 
-void horizontal_shift_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
+inline void horizontal_shift_images(std::vector<cv::Mat>& output_images, std::vector<cv::Mat>& output_labels, 
                 const cv::Mat& input_image, const cv::Mat& input_label, float ratio) {
 
     output_images.push_back(horizontal_shift_image(input_image,ratio));
     output_labels.push_back(horizontal_shift_image(input_label,ratio));
 };
 
-std::tuple<std::vector<cv::Mat>,std::vector<cv::Mat>> image_augmentation(const cv::Mat& input_image,const cv::Mat& input_label) {
+inline std::tuple<std::vector<cv::Mat>,std::vector<cv::Mat>> image_augmentation(const cv::Mat& input_image,const cv::Mat& input_label) {
 
     std::random_device seed;
     std::mt19937 gen{seed()}; // seed the generator

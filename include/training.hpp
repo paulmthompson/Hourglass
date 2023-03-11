@@ -15,7 +15,7 @@ using json = nlohmann::json;
 
 #pragma once
 
-void write_loss(std::vector<float> loss) {
+inline void write_loss(std::vector<float> loss) {
 
     std::ofstream wf("losses.dat", std::ios::out | std::ios::binary);
 
@@ -29,7 +29,7 @@ void write_loss(std::vector<float> loss) {
 
 };
 
-torch::Tensor intermediate_supervision(std::vector<torch::Tensor>& output, torch::Tensor& labels) {
+inline torch::Tensor intermediate_supervision(std::vector<torch::Tensor>& output, torch::Tensor& labels) {
     
     std::vector<torch::Tensor> losses;
 
@@ -48,7 +48,7 @@ torch::Tensor intermediate_supervision(std::vector<torch::Tensor>& output, torch
 };
 
 template <class T>
-void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, training_options& options)
+inline void train_hourglass(StackedHourglass &hourglass, T &data_set, torch::Device device, training_options& options)
 {
     if (options.load_weights) {
         load_weights(hourglass,options.load_weight_path);

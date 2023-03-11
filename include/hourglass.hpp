@@ -258,7 +258,7 @@ struct StackedHourglassImpl : nn::Module {
 };
 TORCH_MODULE(StackedHourglass);
 
-StackedHourglass createHourglass(const std::string& config_file) {
+inline StackedHourglass createHourglass(const std::string& config_file) {
 
     std::ifstream f(config_file);
     json data = json::parse(f);
@@ -276,7 +276,7 @@ StackedHourglass createHourglass(const std::string& config_file) {
     return hourglass;
 }
 
-void load_weights(StackedHourglass& hourglass, const std::string& weight_name) {
+inline void load_weights(StackedHourglass& hourglass, const std::string& weight_name) {
 
     //https://discuss.pytorch.org/t/after-torch-load-model-and-predict-then-got-nan/133142/6
     hourglass->to(kFloat32); // Make sure we are in float 32
