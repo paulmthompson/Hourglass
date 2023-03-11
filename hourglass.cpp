@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 #include "include/hourglass.hpp"
-#include "include/dataload.hpp"
+#include "dataloader/dataload.hpp"
 #include "include/training.hpp"
 #include "include/prediction.hpp"
 
