@@ -76,11 +76,7 @@
         "binaryDir": "${sourceDir}/out/build/GCC/Release",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/GCC/Release",
-            "ffmpeg_wrapper_DIR": {
-              "type": "FILEPATH",
-              "value": "$env{FFMPEG_WRAPPER_ROOT}/out/install/GCC/Release/cmake"
-            }
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/GCC/Release"
           }
       },
       {
@@ -90,11 +86,7 @@
         "binaryDir": "${sourceDir}/out/build/GCC/Debug",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/GCC/Debug",
-            "ffmpeg_wrapper_DIR": {
-              "type": "FILEPATH",
-              "value": "$env{FFMPEG_WRAPPER_ROOT}/out/install/GCC/Debug/cmake"
-            }
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/GCC/Debug"
           }
       },
 
@@ -115,8 +107,7 @@
         "binaryDir": "${sourceDir}/out/build/Clang/Release",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/Clang/Release",
-            "ffmpeg_wrapper_DIR": "$env{FFMPEG_WRAPPER_ROOT}/out/install/Clang/Release/cmake"
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/Clang/Release"
           }
       },
       {
@@ -126,8 +117,7 @@
         "binaryDir": "${sourceDir}/out/build/Clang/Debug",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/Clang/Debug",
-            "ffmpeg_wrapper_DIR": "$env{FFMPEG_WRAPPER_ROOT}/out/install/Clang/Debug/cmake"
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/Clang/Debug"
           }
       },
 
@@ -147,8 +137,7 @@
         "binaryDir": "${sourceDir}/out/build/MSVC/Release",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Release",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/MSVC/Release",
-            "ffmpeg_wrapper_DIR": "$env{FFMPEG_WRAPPER_ROOT}/out/install/MSVC/Release/cmake"
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/MSVC/Release"
           }
       },
       {
@@ -158,11 +147,7 @@
         "binaryDir": "${sourceDir}/out/build/MSVC/Debug",
         "cacheVariables": {
             "CMAKE_BUILD_TYPE": "Debug",
-            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/MSVC/Debug",
-            "ffmpeg_wrapper_DIR": {
-              "type": "FILEPATH",
-              "value": "$env{FFMPEG_WRAPPER_ROOT}/out/install/MSVC/Debug/cmake"
-            }
+            "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/MSVC/Debug"
           }
       },
 

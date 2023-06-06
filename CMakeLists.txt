@@ -12,10 +12,14 @@ with this particular project
 ]]
 set(VCPKG_MANIFEST_MODE ON)
 
+#[[
+We will get external package ffmpeg_wrapper using fetchcontent
+]]
+add_subdirectory(external)
+
 find_package(Torch REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
-find_package(ffmpeg_wrapper CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(hdf5 CONFIG REQUIRED)
 
