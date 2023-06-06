@@ -49,10 +49,14 @@ target_include_directories(Hourglass PRIVATE
 
 if( OpenCV_FOUND )
   # Additional Include Directories
-  target_include_directories(Hourglass PRIVATE ${OpenCV_INCLUDE_DIRS} )
+  target_include_directories(Hourglass PRIVATE 
+        "<BUILD_INTERFACE:${OpenCV_INCLUDE_DIRS}>" 
+        )
 
   # Additional Library Directories
-  target_link_directories(Hourglass PRIVATE ${OpenCV_LIB_DIR} )
+  target_link_directories(Hourglass PRIVATE 
+        "<BUILD_INTERFACE:${OpenCV_LIB_DIR}>" 
+        )
 
   # Additional Dependencies
   target_link_libraries(Hourglass PRIVATE ${OpenCV_LIBS} )
