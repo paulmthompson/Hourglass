@@ -6,6 +6,12 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#[[
+Manifest mode from VCPKG will make all dependancies specified in vcpkg.json be associated and installed
+with this particular project
+]]
+set(VCPKG_MANIFEST_MODE ON)
+
 find_package(Torch REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
