@@ -23,12 +23,16 @@ find_package(hdf5 CONFIG REQUIRED)
 find_package(PNG REQUIRED)
 find_package(OpenCV REQUIRED)
 
-add_executable(Hourglass hourglass.cpp 
+add_executable(Hourglass 
+  hourglass.cpp 
   include/hourglass.hpp 
   include/residual.hpp 
-  include/dataload.hpp 
+
+  dataloader/dataload.cpp
+  dataloader/dataload.hpp 
+  dataloader/augmentation.hpp
+
   include/training.hpp
-  include/augmentation.hpp
   include/prediction.hpp
   include/saveload.hpp
   include/subpixel.hpp
