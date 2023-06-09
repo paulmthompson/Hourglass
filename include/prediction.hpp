@@ -189,32 +189,55 @@ inline cv::Mat combine_overlay(const cv::Mat& img, const cv::Mat& label,
     return dst;
 }
 
+/*
+Here we are taking a black and white input (img), 
+and creating a color image (color_img) by overlaying the labels (labels) on top of it.
+
+To make the labels a color, we want to create a duplicate of the grayscale image, and then
+set the color channels to 0 or 255 depending on the color array.
+
+If we use a "black" background color, we end up with a significantly darkened image
+https://stackoverflow.com/questions/67989210/blending-images-without-color-change
+https://docs.opencv.org/3.4/d0/d86/tutorial_py_image_arithmetics.html
+*/
 inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
                         const std::vector<std::array<bool,3>>& colors) {
-    
+
+    //This function should add labels on top of the input image and return the result   
     cv::Mat color_img;
-    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB);
-    
+    cv::cvtColor(img,color_img,cv::COLOR_GRAY2RGB); // Convert our input img to a color image
+
+    // We will create a copy of the color image as our background for the labels
+    cv::Mat label_img = color_img.clone();
+
+    //We split the label image into its color channels.
+    cv::Mat channel[3];
+    cv::split(label_img,channel);
+
     for (int j=0; j< labels.size(); j++) {
 
-        cv::Mat color_label;
-        cv::Mat channel[3];
-    
-        cv::cvtColor(labels[j],color_label,cv::COLOR_GRAY2RGB);
+        //For each label we are going to generate a mask of the label
+        cv::Mat label_mask;
+        cv::threshold(labels[j], label_mask, 10, 255,cv::THRESH_BINARY);
 
-        cv::split(color_label,channel);
+        //For the color assigned to the label, we set the color channel(s) to the value of the label (probably 255)
 
         for (int i = 0; i < 3; i++) {
-            if (!colors[j][i]) {
-                channel[i] = cv::Mat::zeros(img.rows, img.cols, CV_8UC1); 
+            if (colors[j][i]) {
+                cv::bitwise_or(channel[i],labels[j],channel[i],label_mask);
             }
         }
-
-        cv::merge(channel,3,color_label);
-
-        cv::addWeighted(color_label,0.5, color_img,0.5,0.0,color_img);
     }
+
+    //Now merge the channels back together to get an image with opaque colors drawn on top.
+    cv::Mat color_label;
+    cv::merge(channel,3,color_label);
+
+    //We can blend the opaque image with our unlabeled image to add some transparency.
+    cv::addWeighted(color_label,0.5, color_img,0.5,0.0,color_img);
+
     return color_img;
+    
 }
 
 inline void get_data_to_save_mask(const torch::Tensor& pred, save_structure& save,const int frame_index,const int channel_index) {
