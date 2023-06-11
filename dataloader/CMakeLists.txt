@@ -3,13 +3,17 @@ cmake_minimum_required(VERSION 3.24)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#This is necessary to work on windows. A better way would be to define only the symbols that need to be exported
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 add_library(dataloader SHARED 
                         augmentation.hpp 
                         dataload.hpp 
                         dataload.cpp)
 
 
-target_include_directories(dataloader PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+target_include_directories(dataloader PUBLIC 
+                                    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
 
 if( OpenCV_FOUND )
   # Additional Include Directories

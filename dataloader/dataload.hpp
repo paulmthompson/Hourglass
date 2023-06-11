@@ -26,6 +26,12 @@ using paths = std::vector<std::filesystem::path>;
 
 #pragma once
 
+#if defined _WIN32 || defined __CYGWIN__
+	#define DLLOPT __declspec(dllexport)
+#else
+	#define DLLOPT __attribute__((visibility("default")))
+#endif
+
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
 inline cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
     if (!fs::exists(image_path)) {
@@ -83,72 +89,48 @@ inline cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const 
 
 /////////////////////////////////////////////////////////////////////////////////
 class label_path {
+
 public:
-label_path() = default;
+    label_path() = default;
 
-label_path(const label_path&) =delete;
-void operator=(const label_path&) =delete;
+    label_path(const label_path&) =delete;
+    void operator=(const label_path&) =delete;
 
-virtual ~label_path() {}
+    virtual ~label_path() {}
 
-virtual cv::Mat load_image(int w, int h) const = 0;
-
+    virtual cv::Mat load_image(int w, int h) const = 0;
 };
 
 class pixel_label_path : public label_path {
 public:
-    pixel_label_path(int x, int y,int rad) {
-        this->x = x;
-        this->y = y;
-        this->rad = rad; // This needs to be an odd number
-    }
-    cv::Mat load_image(int w, int h) const override {
-        return generate_heatmap(this->x, this->y, this->rad, w, h);
-    }
+    pixel_label_path(int x, int y,int rad);
+    cv::Mat load_image(int w, int h) const override;
 
 private:
-int x;
-int y;
-int rad;
-
+    int x;
+    int y;
+    int rad;
 };
 
 class img_label_path : public label_path {
-    public:
+    
+public:
+    img_label_path(std::filesystem::path this_path);
+    cv::Mat load_image(int w, int h) const override;
 
-    img_label_path(std::filesystem::path this_path) {
-        this->path = this_path;
-    }
-
-    cv::Mat load_image(int w, int h) const override {
-        return load_image_from_path(this->path,w,h);
-    }
-
-    private:
+private:
     std::filesystem::path path;
-
 };
 
 class img_label_pair {
-    public:
+
+public:
     img_label_pair() = default;
-    img_label_pair(fs::path this_img) {
-        this->img = this_img;
-        //this->labels = std::vector<std::unique_ptr<label_path>>();
-    }
-    img_label_pair(fs::path this_img, fs::path this_label) {
-        this->img = this_img;
-        this->labels = std::vector<std::unique_ptr<label_path>>();
-        this->labels.emplace_back(std::make_unique<img_label_path>(this_label));
-    }
-    void add_label(fs::path this_label) {
-        auto label = std::make_unique<img_label_path>(this_label);
-        this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
-    }
-    void add_label(int x, int y,int rad) {
-        auto label = std::make_unique<pixel_label_path>(x,y,rad);
-        this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
-    }
+    img_label_pair(fs::path this_img);
+    img_label_pair(fs::path this_img, fs::path this_label);
+    void add_label(fs::path this_label);
+    void add_label(int x, int y,int rad);
+    
     fs::path img;
     std::vector<std::unique_ptr<label_path>> labels;
 };
