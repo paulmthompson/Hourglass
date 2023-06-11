@@ -226,7 +226,7 @@ inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& l
         //For the color assigned to the label, we set the color channel(s) to the value of the label
         for (int i = 0; i < 3; i++) {
             if (label_colors[j][i]) {
-                cv::bitwise_or(channel[i],labels[j],channel[i],label_mask);
+                cv::bitwise_or(channel[i],labels[j],channel[i],label_mask); // This will make all pixels in the label mask opaque in that channel
             }
         }
     }

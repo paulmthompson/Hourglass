@@ -31,19 +31,17 @@ add_executable(Hourglass
   hourglass.cpp 
   include/hourglass.hpp 
   include/residual.hpp 
-
-  dataloader/dataload.cpp
-  dataloader/dataload.hpp 
-  dataloader/augmentation.hpp
-
   include/training.hpp
   include/prediction.hpp
   include/saveload.hpp
   include/subpixel.hpp
   )
 
+add_subdirectory(dataloader)
+
 target_include_directories(Hourglass PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/dataloader>"
   "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
@@ -69,6 +67,8 @@ target_link_libraries(Hourglass PRIVATE PNG::PNG)
 target_link_libraries(Hourglass PRIVATE ffmpeg_wrapper::ffmpeg_wrapper)
 target_link_libraries(Hourglass PRIVATE HighFive)
 target_link_libraries(Hourglass PRIVATE hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared hdf5::hdf5_hl_cpp-shared)
+
+target_link_libraries(Hourglass PRIVATE dataloader)
 
 
 # The following code block is suggested to be used on Windows.
