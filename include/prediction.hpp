@@ -201,7 +201,7 @@ https://stackoverflow.com/questions/67989210/blending-images-without-color-chang
 https://docs.opencv.org/3.4/d0/d86/tutorial_py_image_arithmetics.html
 */
 inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
-                        const std::vector<std::array<bool,3>>& colors) {
+                        const std::vector<std::array<bool,3>>& label_colors) {
 
     //This function should add labels on top of the input image and return the result   
     cv::Mat color_img;
@@ -217,13 +217,15 @@ inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& l
     for (int j=0; j< labels.size(); j++) {
 
         //For each label we are going to generate a mask of the label
-        cv::Mat label_mask;
-        cv::threshold(labels[j], label_mask, 10, 255,cv::THRESH_BINARY);
+        //By setting those pixels to an opaque color.
+        const double label_threshold = 10; // Labels above this value will be set to label value
+        const double label_maxval = 255; // Labels above threshold will be set to this value. 
+        cv::Mat label_mask; // Label mask will be all black except for label pixels which are white
+        cv::threshold(labels[j], label_mask, label_threshold, label_maxval,cv::THRESH_BINARY);
 
-        //For the color assigned to the label, we set the color channel(s) to the value of the label (probably 255)
-
+        //For the color assigned to the label, we set the color channel(s) to the value of the label
         for (int i = 0; i < 3; i++) {
-            if (colors[j][i]) {
+            if (label_colors[j][i]) {
                 cv::bitwise_or(channel[i],labels[j],channel[i],label_mask);
             }
         }
