@@ -54,6 +54,7 @@
         },
         "cacheVariables": {
             "VCPKG_TARGET_TRIPLET": "x64-linux-dynamic",
+            "VCPKG_HOST_TRIPLET": "x64-linux-dynamic",
             "CMAKE_PREFIX_PATH": {
               "type": "FILEPATH",
               "value": "$env{LIBTORCH_PATH}"

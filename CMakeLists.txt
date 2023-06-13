@@ -17,15 +17,19 @@ We will get external package ffmpeg_wrapper using fetchcontent
 ]]
 add_subdirectory(external)
 
-find_package(Torch REQUIRED)
+#[[
+I am using vcpkg manifest to install the following packages. Libtorch (where I am not using VCPKG) is going have some shared dependancies,
+specifically at least protobuf, and will error if it imports first from outside of vcpkg. Consequently, it is best to use find_package with all
+of the vcpkg dependancies FIRST
+]]
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
 find_package(HighFive CONFIG REQUIRED)
 find_package(hdf5 CONFIG REQUIRED)
-
-#Image Loading
 find_package(PNG REQUIRED)
 find_package(OpenCV REQUIRED)
+
+find_package(Torch REQUIRED)
 
 add_executable(Hourglass 
   hourglass.cpp 
@@ -60,7 +64,6 @@ if( OpenCV_FOUND )
   target_link_libraries(Hourglass PRIVATE ${OpenCV_LIBS} )
 endif()
 
-target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(Hourglass PRIVATE nlohmann_json::nlohmann_json)
 target_link_libraries(Hourglass PRIVATE cxxopts::cxxopts)
 target_link_libraries(Hourglass PRIVATE PNG::PNG)
@@ -69,6 +72,8 @@ target_link_libraries(Hourglass PRIVATE HighFive)
 target_link_libraries(Hourglass PRIVATE hdf5::hdf5-shared hdf5::hdf5_hl-shared hdf5::hdf5_cpp-shared hdf5::hdf5_hl_cpp-shared)
 
 target_link_libraries(Hourglass PRIVATE dataloader)
+
+target_link_libraries(Hourglass PRIVATE "${TORCH_LIBRARIES}")
 
 
 # The following code block is suggested to be used on Windows.
