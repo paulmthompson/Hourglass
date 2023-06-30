@@ -1,7 +1,6 @@
 #include <torch/torch.h>
 #include <nlohmann/json.hpp>
 #include <opencv2/opencv.hpp>
-#include <ffmpeg_wrapper/videodecoder.h>
 
 #include <string>
 #include <iostream>
@@ -156,46 +155,25 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////
 
+//This helper method takes a vector of tensors and then stacks them into a single tensor.
+//It also converts the tensor to float and normalizes it to 0-1. (Should this be checked for?)
+
 inline torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
     auto stacked = torch::stack(torch::TensorList(tensor));
 
     return stacked.to(torch::kFloat32).div(255);
 }
 
-inline torch::Tensor LoadFrame(ffmpeg_wrapper::VideoDecoder& vd, int frame_id) {
-
-    std::vector<uint8_t> image = vd.getFrame(frame_id, true);
-
-    int img_height = vd.getHeight();
-    int img_width = vd.getWidth();
-
-    auto tensor = torch::empty(
-           { img_height, img_width, 1},
-            torch::TensorOptions()  
-               .dtype(torch::kByte)   
-               .device(torch::kCPU));     
-               
-    // Copy over the data 
-    std::memcpy(tensor.data_ptr(), image.data(), tensor.numel() * sizeof(at::kByte));
-
-    return tensor.permute({2,0,1});
-}
-
-inline torch::Tensor LoadFrames(ffmpeg_wrapper::VideoDecoder& vd, int frame_start, int frame_end) {
-
-    std::vector<torch::Tensor> frames;
-
-    for (int i = frame_start; i <= frame_end; i++) {
-        frames.push_back(LoadFrame(vd,i));
-    }
-
-    //std::cout << "Loaded frames " << frame_start << " - " << frame_end << std::endl;
-
-    return make_tensor_stack(frames);
-}
-
 template<typename T>
 inline void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
+
+    //TODO check that the vectors are the same size
+    if (imgs.size() != labels.size()) {
+        std::cout << "The label and image vectors are not the same size" << std::endl;
+        std::cout << "Images size: " << imgs.size() << std::endl;
+        std::cout << "Labels size: " << labels.size() << std::endl;
+        std::cout << "Aborting shuffle" << std::endl;
+    }
 
     int n = imgs.size();
     //https://www.techiedelight.com/shuffle-vector-cpp/

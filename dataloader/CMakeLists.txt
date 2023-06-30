@@ -32,4 +32,3 @@ endif()
 
 target_link_libraries(dataloader PRIVATE "${TORCH_LIBRARIES}")
 target_link_libraries(dataloader PRIVATE nlohmann_json::nlohmann_json)
-target_link_libraries(dataloader PRIVATE ffmpeg_wrapper::ffmpeg_wrapper)

@@ -141,6 +141,39 @@ private:
 
 /////////////////////////////////////////////////////////////////////////////////
 
+inline torch::Tensor LoadFrame(ffmpeg_wrapper::VideoDecoder& vd, int frame_id) {
+
+    std::vector<uint8_t> image = vd.getFrame(frame_id, true);
+
+    int img_height = vd.getHeight();
+    int img_width = vd.getWidth();
+
+    auto tensor = torch::empty(
+           { img_height, img_width, 1},
+            torch::TensorOptions()  
+               .dtype(torch::kByte)   
+               .device(torch::kCPU));     
+               
+    // Copy over the data 
+    std::memcpy(tensor.data_ptr(), image.data(), tensor.numel() * sizeof(at::kByte));
+
+    return tensor.permute({2,0,1});
+}
+
+inline torch::Tensor LoadFrames(ffmpeg_wrapper::VideoDecoder& vd, int frame_start, int frame_end) {
+
+    std::vector<torch::Tensor> frames;
+
+    for (int i = frame_start; i <= frame_end; i++) {
+        frames.push_back(LoadFrame(vd,i));
+    }
+
+    //std::cout << "Loaded frames " << frame_start << " - " << frame_end << std::endl;
+
+    return make_tensor_stack(frames);
+}
+
+/////////////////////////////////////////////////////////////////////////////////
 
 inline torch::Tensor prepare_for_opencv(torch::Tensor tensor,const int height, const int width) {
 
