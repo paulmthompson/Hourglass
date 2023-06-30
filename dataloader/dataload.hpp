@@ -31,109 +31,6 @@ using paths = std::vector<std::filesystem::path>;
 	#define DLLOPT __attribute__((visibility("default")))
 #endif
 
-//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-inline cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
-    if (!fs::exists(image_path)) {
-        std::cout << "File path does not exist at " << image_path.string() << std::endl;
-    }
-    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
-    cv::Mat image;
-    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
-
-    if (!image.isContinuous()) {   
-        image = image.clone(); 
-    }
-
-    return image;
-};
-
-inline cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) {
-    
-    int img_w = 640;
-    int img_h = 480;
-
-    if ((x > img_w) | (y > img_h)) {
-        std::cout << "Coordinate is out of bounds" << std::endl;
-    }
-
-    cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_32FC1);
-    if ((x >= 0) & (y >= 0)) {
-        float & point = raw_image.at<float>(y,x);
-        point = 255.0;
-    } else {
-        std::cout << "No label for this image" << std::endl;
-    }
-
-    cv::Mat raw_image2;
-    cv::GaussianBlur(raw_image, raw_image2, cv::Size(rad,rad), 0);
-
-    cv::Mat raw_image3;
-    cv::normalize(raw_image2,raw_image3,0.0,255.0,cv::NORM_MINMAX);
-
-    cv::Mat image = cv::Mat(h,w,CV_32FC1);
-
-    cv::resize(raw_image3,image,image.size(),0.0,0.0,cv::INTER_AREA);
-
-    cv::Mat image_out = cv::Mat(h,w,CV_8UC1);
-    image.convertTo(image_out,CV_8UC1);
-
-    if (!image_out.isContinuous()) {   
-        image_out = image_out.clone(); 
-    }
-
-    //imwrite("test.png",image_out);
-
-    return image_out;
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-class label_path {
-
-public:
-    label_path() = default;
-
-    label_path(const label_path&) =delete;
-    void operator=(const label_path&) =delete;
-
-    virtual ~label_path() {}
-
-    virtual cv::Mat load_image(int w, int h) const = 0;
-};
-
-class pixel_label_path : public label_path {
-public:
-    pixel_label_path(int x, int y,int rad);
-    cv::Mat load_image(int w, int h) const override;
-
-private:
-    int x;
-    int y;
-    int rad;
-};
-
-class img_label_path : public label_path {
-    
-public:
-    img_label_path(std::filesystem::path this_path);
-    cv::Mat load_image(int w, int h) const override;
-
-private:
-    std::filesystem::path path;
-};
-
-class img_label_pair {
-
-public:
-    img_label_pair() = default;
-    img_label_pair(fs::path this_img);
-    img_label_pair(fs::path this_img, fs::path this_label);
-    void add_label(fs::path this_label);
-    void add_label(int x, int y,int rad);
-
-    fs::path img;
-    std::vector<std::unique_ptr<label_path>> labels;
-};
-
 /////////////////////////////////////////////////////////////////////////////////
 
 class training_options {
@@ -151,6 +48,119 @@ public:
     bool intermediate_supervision;
     bool load_weights;
     std::string load_weight_path;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+
+ class MyDataset : public torch::data::Dataset<MyDataset>
+{
+    private:
+        torch::Tensor states_, labels_;
+
+    public:
+        explicit MyDataset(training_options& training_opts);
+        torch::data::Example<> get(size_t index) override;
+        torch::optional<size_t> size() const override;
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+// Labels can take the form of 1) images (masks) or 2) pixel coordinates (x,y) which can be used to generate a heatmap image
+
+class Label {
+
+public:
+    Label() = default;
+
+    Label(const Label&) =delete;
+    void operator=(const Label&) =delete;
+
+    virtual ~Label() {}
+
+    virtual cv::Mat load_image(int w, int h) const = 0;
+
+private:
+    cv::Mat resize_image(const cv::Mat& img, int w, int h) const;
+};
+
+class PixelLabel : public Label {
+public:
+    PixelLabel(int x, int y,int rad);
+    cv::Mat load_image(int w, int h) const override;
+
+private:
+    int x;
+    int y;
+    int rad;
+    cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) const;
+};
+
+class MaskLabel : public Label {
+    
+public:
+    MaskLabel(std::filesystem::path this_path);
+    cv::Mat load_image(int w, int h) const override;
+
+private:
+    std::filesystem::path path;
+};
+
+// An image can have multiple labels, so this class stores a vector of labels
+class img_label_pair {
+
+public:
+    img_label_pair() = default;
+    img_label_pair(fs::path this_img);
+    img_label_pair(fs::path this_img, fs::path this_label);
+    void add_label(fs::path this_label);
+    void add_label(int x, int y,int rad);
+
+    fs::path img;
+    std::vector<std::unique_ptr<Label>> labels;
+};
+
+typedef enum {MASK, PIXEL} LABEL_TYPE;
+
+struct name_and_path {
+    std::string name;
+    std::filesystem::path path;
+    int x;
+    int y;
+    LABEL_TYPE label_type;
+    name_and_path() = default;
+    name_and_path(std::string name, std::filesystem::path path) {
+        this->name = name;
+        this->path = path;
+        this->x = 0;
+        this->y = 0;
+        this->label_type = MASK;
+    }
+    name_and_path(std::string name, int x, int y) {
+        this->name = name;
+        this->path = "";
+        this->x = x;
+        this->y = y;
+        this->label_type = PIXEL;
+    }
+};
+
+/////////////////////////////////////////////////////////////////////////////////
+
+//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
+inline cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
+    if (!fs::exists(image_path)) {
+        std::cout << "File path does not exist at " << image_path.string() << std::endl;
+    }
+    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
+    cv::Mat image;
+    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
+
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
+    }
+
+    return image;
 };
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -182,33 +192,6 @@ inline void shuffle(std::vector<T>& imgs, std::vector<T>& labels) {
         int j = i + rand() % (n - i);
         std::swap(imgs[i],imgs[j]);
         std::swap(labels[i],labels[j]);
-    }
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-
-typedef enum {MASK, PIXEL} LABEL_TYPE;
-
-struct name_and_path {
-    std::string name;
-    std::filesystem::path path;
-    int x;
-    int y;
-    LABEL_TYPE label_type;
-    name_and_path() = default;
-    name_and_path(std::string name, std::filesystem::path path) {
-        this->name = name;
-        this->path = path;
-        this->x = 0;
-        this->y = 0;
-        this->label_type = MASK;
-    }
-    name_and_path(std::string name, int x, int y) {
-        this->name = name;
-        this->path = "";
-        this->x = x;
-        this->y = y;
-        this->label_type = PIXEL;
     }
 };
 
@@ -308,14 +291,3 @@ inline void match_image_and_labels(std::vector<name_and_path>& this_view_images,
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-
- class MyDataset : public torch::data::Dataset<MyDataset>
-{
-    private:
-        torch::Tensor states_, labels_;
-
-    public:
-        explicit MyDataset(training_options& training_opts);
-        torch::data::Example<> get(size_t index) override;
-        torch::optional<size_t> size() const override;
-};

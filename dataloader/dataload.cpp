@@ -7,48 +7,6 @@
 using json = nlohmann::json;
 using namespace torch;
 
-/////////////////////////////////////////////////////////////////////////////////
-
-pixel_label_path::pixel_label_path(int x, int y,int rad) {
-    this->x = x;
-    this->y = y;
-    this->rad = rad; // This needs to be an odd number
-}
-
-cv::Mat pixel_label_path::load_image(int w, int h) const {
-    return generate_heatmap(this->x, this->y, this->rad, w, h);
-}
-
-img_label_path::img_label_path(std::filesystem::path this_path) {
-    this->path = this_path;
-}
-
-cv::Mat img_label_path::load_image(int w, int h) const {
-    return load_image_from_path(this->path,w,h);
-}
-
-img_label_pair::img_label_pair(fs::path this_img) {
-    this->img = this_img;
-    //this->labels = std::vector<std::unique_ptr<label_path>>();
-}
-
-img_label_pair::img_label_pair(fs::path this_img, fs::path this_label) {
-    this->img = this_img;
-    this->labels = std::vector<std::unique_ptr<label_path>>();
-    this->labels.emplace_back(std::make_unique<img_label_path>(this_label));
-}
-
-void img_label_pair::add_label(fs::path this_label) {
-    auto label = std::make_unique<img_label_path>(this_label);
-    this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
-}
-
-void img_label_pair::add_label(int x, int y,int rad) {
-    auto label = std::make_unique<pixel_label_path>(x,y,rad);
-    this->labels.push_back(std::unique_ptr<label_path>(std::move(label)));
-}
-
-/////////////////////////////////////////////////////////////////////////////////
 
 training_options::training_options(const std::string& config_file) {
     std::ifstream f(config_file);
@@ -96,6 +54,102 @@ training_options::training_options(const std::string& config_file) {
     }
 
     this->config_file = config_file;
+}
+
+/////////////////////////////////////////////////////////////////////////////////
+
+cv::Mat Label::resize_image(const cv::Mat& raw_image, int w, int h) const {
+
+    cv::Mat image;
+    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
+
+    if (!image.isContinuous()) {   
+        image = image.clone(); 
+    }
+
+    return image;
+};
+
+PixelLabel::PixelLabel(int x, int y,int rad) {
+    this->x = x;
+    this->y = y;
+    this->rad = rad; // This needs to be an odd number
+}
+
+cv::Mat PixelLabel::load_image(int w, int h) const {
+    return this->generate_heatmap(this->x, this->y, this->rad, w, h);
+}
+
+ // This takes a 2D coordinate and generates a heatmap with a gaussian distribution
+// The keypoint coordinate (x,y) is from an an image of size (img_w,img_h)
+// The heatmap is generated with size (w,h)
+
+cv::Mat PixelLabel::generate_heatmap(int x, int y, const int rad, const int w, const int h) const {
+    
+    int img_w = 640;
+    int img_h = 480;
+
+    if ((x > img_w) | (y > img_h)) {
+        std::cout << "Coordinate is out of bounds" << std::endl;
+    }
+
+    cv::Mat raw_image = cv::Mat::zeros(img_h,img_w,CV_32FC1);
+    if ((x >= 0) & (y >= 0)) {
+        float & point = raw_image.at<float>(y,x);
+        point = 255.0;
+    } else {
+        std::cout << "Label at (0,0) is interpreted as no label for this image" << std::endl;
+    }
+
+    cv::Mat raw_image2;
+    cv::GaussianBlur(raw_image, raw_image2, cv::Size(rad,rad), 0);
+
+    cv::Mat raw_image3;
+    cv::normalize(raw_image2,raw_image3,0.0,255.0,cv::NORM_MINMAX);
+
+    cv::Mat image = cv::Mat(h,w,CV_32FC1);
+
+    cv::resize(raw_image3,image,image.size(),0.0,0.0,cv::INTER_AREA);
+
+    cv::Mat image_out = cv::Mat(h,w,CV_8UC1);
+    image.convertTo(image_out,CV_8UC1);
+
+    if (!image_out.isContinuous()) {   
+        image_out = image_out.clone(); 
+    }
+
+    //imwrite("test.png",image_out);
+
+    return image_out;
+};
+
+MaskLabel::MaskLabel(std::filesystem::path this_path) {
+    this->path = this_path;
+}
+
+cv::Mat MaskLabel::load_image(int w, int h) const {
+    return load_image_from_path(this->path,w,h);
+}
+
+img_label_pair::img_label_pair(fs::path this_img) {
+    this->img = this_img;
+    //this->labels = std::vector<std::unique_ptr<label_path>>();
+}
+
+img_label_pair::img_label_pair(fs::path this_img, fs::path this_label) {
+    this->img = this_img;
+    this->labels = std::vector<std::unique_ptr<Label>>();
+    this->labels.emplace_back(std::make_unique<MaskLabel>(this_label));
+}
+
+void img_label_pair::add_label(fs::path this_label) {
+    auto label = std::make_unique<MaskLabel>(this_label);
+    this->labels.push_back(std::unique_ptr<Label>(std::move(label)));
+}
+
+void img_label_pair::add_label(int x, int y,int rad) {
+    auto label = std::make_unique<PixelLabel>(x,y,rad);
+    this->labels.push_back(std::unique_ptr<Label>(std::move(label)));
 }
 
 /////////////////////////////////////////////////////////////////////////////////
