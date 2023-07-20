@@ -13,42 +13,38 @@ training_options::training_options(const std::string& config_file) {
     json data = json::parse(f);
     f.close();
 
-    this->epochs = 1;
     if (data["training"].contains("epochs")) {
          this->epochs = data["training"]["epochs"];
     }
-    this->batch_size = 32;
+
     if (data["training"].contains("batch-size")) {
         this->batch_size = data["training"]["batch-size"];
     }
-    this->learning_rate = 5e-5;
+
     if (data["training"].contains("learning-rate")) {
         this->learning_rate = data["training"]["learning-rate"];
     }
-    this->image_augmentation = false;
+
     if (data["training"].contains("image-augmentation")) {
          this->image_augmentation = data["training"]["image-augmentation"];
     }
-    this->keypoint_radius = 101;
+
     if (data["training"].contains("keypoint-radius")) {
         this->keypoint_radius = data["training"]["keypoint-radius"];
     }
 
-    this->weight_save_name = "hourglass_weights.pt";
     if (data["training"].contains("save-name")) {
         this->weight_save_name = data["training"]["save-name"];
     }
 
-    this->load_weights = false;
     if (data["training"]["load-weights"].contains("load")) {
         this->load_weights = data["training"]["load-weights"]["load"];
     }
-    this->load_weight_path = "hourglass_weights.pt";
+
     if (data["training"]["load-weights"].contains("path")) {
         this->load_weight_path = data["training"]["load-weights"]["path"];
     }
 
-    this->intermediate_supervision = true;
     if (data["training"].contains("intermediate-supervision")) {
         this->intermediate_supervision = data["training"]["intermediate-supervision"];
     }
