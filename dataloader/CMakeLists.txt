@@ -9,7 +9,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 add_library(dataloader SHARED 
                         augmentation.hpp 
                         dataload.hpp 
-                        dataload.cpp)
+                        dataload.cpp
+                        training_options.hpp
+                        training_options.cpp)
 
 
 target_include_directories(dataloader PUBLIC 
