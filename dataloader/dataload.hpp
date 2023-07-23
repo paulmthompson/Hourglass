@@ -17,6 +17,8 @@
 #include "training_options.hpp"
 #include "Label.hpp"
 #include "PixelLabel.hpp"
+#include "MaskLabel.hpp"
+#include "utilities.hpp"
 
 using namespace torch;
 namespace fs = std::filesystem;
@@ -49,16 +51,6 @@ using paths = std::vector<std::filesystem::path>;
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-
-class MaskLabel : public Label {
-    
-public:
-    MaskLabel(std::filesystem::path this_path);
-    cv::Mat load_image(int w, int h) const override;
-
-private:
-    std::filesystem::path path;
-};
 
 // An image can have multiple labels, so this class stores a vector of labels
 class img_label_pair {
@@ -97,24 +89,6 @@ struct name_and_path {
         this->y = y;
         this->label_type = PIXEL;
     }
-};
-
-/////////////////////////////////////////////////////////////////////////////////
-
-//https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
-inline cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
-    if (!fs::exists(image_path)) {
-        std::cout << "File path does not exist at " << image_path.string() << std::endl;
-    }
-    cv::Mat raw_image = cv::imread(image_path.string(),cv::IMREAD_GRAYSCALE);
-    cv::Mat image;
-    cv::resize(raw_image, image,cv::Size(w,h), cv::INTER_AREA);
-
-    if (!image.isContinuous()) {   
-        image = image.clone(); 
-    }
-
-    return image;
 };
 
 /////////////////////////////////////////////////////////////////////////////////

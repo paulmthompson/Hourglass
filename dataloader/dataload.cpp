@@ -7,14 +7,6 @@
 using json = nlohmann::json;
 using namespace torch;
 
-MaskLabel::MaskLabel(std::filesystem::path this_path) {
-    this->path = this_path;
-}
-
-cv::Mat MaskLabel::load_image(int w, int h) const {
-    return load_image_from_path(this->path,w,h);
-}
-
 img_label_pair::img_label_pair(fs::path this_img) {
     this->img = this_img;
     //this->labels = std::vector<std::unique_ptr<label_path>>();

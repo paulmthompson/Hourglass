@@ -15,7 +15,12 @@ add_library(dataloader SHARED
                         Label.hpp
                         Label.cpp
                         PixelLabel.hpp
-                        PixelLabel.cpp)
+                        PixelLabel.cpp
+                        MaskLabel.hpp
+                        MaskLabel.cpp
+                        utilities.hpp
+                        utilities.cpp
+                        )
 
 
 target_include_directories(dataloader PUBLIC 
