@@ -11,7 +11,9 @@ add_library(dataloader SHARED
                         dataload.hpp 
                         dataload.cpp
                         training_options.hpp
-                        training_options.cpp)
+                        training_options.cpp
+                        Label.hpp
+                        Label.cpp)
 
 
 target_include_directories(dataloader PUBLIC 
