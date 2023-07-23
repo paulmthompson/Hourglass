@@ -3,8 +3,6 @@
 
 #include <opencv2/opencv.hpp>
 
-using namespace cv;
-
 // Labels can take the form of 1) images (masks) or 2) pixel coordinates (x,y) which can be used to generate a heatmap image
 
 class Label {

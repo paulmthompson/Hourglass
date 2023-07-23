@@ -1,5 +1,7 @@
 #include "utilities.hpp"
 
+namespace utilities {
+
 //https://g-airborne.com/bringing-your-deep-learning-model-to-production-with-libtorch-part-3-advanced-libtorch/
 cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int h) {
     if (!std::filesystem::exists(image_path)) {
@@ -15,3 +17,15 @@ cv::Mat load_image_from_path(const std::filesystem::path& image_path, int w, int
 
     return image;
 };
+
+}
+/*
+//This helper method takes a vector of tensors and then stacks them into a single tensor.
+//It also converts the tensor to float and normalizes it to 0-1. (Should this be checked for?)
+
+torch::Tensor make_tensor_stack(std::vector<torch::Tensor>& tensor) {
+    auto stacked = torch::stack(torch::TensorList(tensor));
+
+    return stacked.to(torch::kFloat32).div(255);
+}
+*/

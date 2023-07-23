@@ -3,12 +3,9 @@
 
 #include "Label.hpp"
 
-#include <filesystem>
-
 #include <opencv2/opencv.hpp>
 
-using namespace cv;
-
+#include <filesystem>
 
 class MaskLabel : public Label {
     

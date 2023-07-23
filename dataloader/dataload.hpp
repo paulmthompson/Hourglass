@@ -24,8 +24,6 @@ using namespace torch;
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
-using namespace cv;
-
 using paths = std::vector<std::filesystem::path>;
 
 #pragma once
@@ -160,7 +158,7 @@ inline std::tuple<int,int> get_width_height(const std::string& config_file, cons
     std::vector<torch::Tensor> label_tensor;
 
     for (auto& this_img_label : image_paths) {
-        auto this_img = load_image_from_path(this_img_label.img,w_img,h_img);
+        auto this_img = utilities::load_image_from_path(this_img_label.img,w_img,h_img);
 
         cv::Mat this_label;
         std::vector<cv::Mat> array_of_labels;

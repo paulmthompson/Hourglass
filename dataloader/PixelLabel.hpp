@@ -5,8 +5,6 @@
 
 #include "Label.hpp"
 
-using namespace cv;
-
 class PixelLabel : public Label {
 public:
     PixelLabel(int x, int y,int rad);
