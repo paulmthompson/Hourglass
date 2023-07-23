@@ -13,7 +13,9 @@ add_library(dataloader SHARED
                         training_options.hpp
                         training_options.cpp
                         Label.hpp
-                        Label.cpp)
+                        Label.cpp
+                        PixelLabel.hpp
+                        PixelLabel.cpp)
 
 
 target_include_directories(dataloader PUBLIC 

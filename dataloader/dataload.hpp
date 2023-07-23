@@ -16,6 +16,7 @@
 #include "augmentation.hpp"
 #include "training_options.hpp"
 #include "Label.hpp"
+#include "PixelLabel.hpp"
 
 using namespace torch;
 namespace fs = std::filesystem;
@@ -48,18 +49,6 @@ using paths = std::vector<std::filesystem::path>;
 };
 
 /////////////////////////////////////////////////////////////////////////////////
-
-class PixelLabel : public Label {
-public:
-    PixelLabel(int x, int y,int rad);
-    cv::Mat load_image(int w, int h) const override;
-
-private:
-    int x;
-    int y;
-    int rad;
-    cv::Mat generate_heatmap(int x, int y, const int rad, const int w, const int h) const;
-};
 
 class MaskLabel : public Label {
     
