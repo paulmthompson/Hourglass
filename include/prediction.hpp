@@ -92,9 +92,17 @@ public:
                 }
             }
         }
-        this->label_colors = std::vector<std::array<bool,3>>(output_dims,std::array<bool,3>{false,false,true});
+        this->label_colors = std::vector<std::array<uint8_t,3>>(output_dims,std::array<uint8_t,3>{0,0,255});
         if (output_dims > 1) {
-            this->label_colors[1] = {false,true,false};
+            this->label_colors[1] = {0,255,0};
+        }
+        if (data["prediction"].contains("label-colors")) {
+            int label_index = 0;
+            for (auto label_color : data["prediction"]["label-colors"]) {
+                std::array<uint8_t,3> color = {label_color[0],label_color[1],label_color[2]};
+                this->label_colors[label_index] = color;
+                label_index += 1;
+            }
         }
 
         this->load_weights = false;
@@ -132,7 +140,7 @@ public:
     int batch_size;
     int64_t total_images;
     std::vector<LABEL_TYPE> label_types;
-    std::vector<std::array<bool,3>> label_colors;
+    std::vector<std::array<uint8_t,3>> label_colors;
     bool load_weights;
     std::string load_weight_path;
 private:
@@ -234,7 +242,7 @@ https://stackoverflow.com/questions/67989210/blending-images-without-color-chang
 https://docs.opencv.org/3.4/d0/d86/tutorial_py_image_arithmetics.html
 */
 inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& labels,
-                        const std::vector<std::array<bool,3>>& label_colors) {
+                        const std::vector<std::array<uint8_t,3>>& label_colors) {
 
     //This function should add labels on top of the input image and return the result   
     cv::Mat color_img;
@@ -251,16 +259,17 @@ inline cv::Mat combine_overlay(const cv::Mat& img, const std::vector<cv::Mat>& l
 
         //For each label we are going to generate a mask of the label
         //By setting those pixels to an opaque color.
-        const double label_threshold = 10; // Labels above this value will be set to label value
+        const double label_threshold = 128; // Labels above this value will be set to label value
         const double label_maxval = 255; // Labels above threshold will be set to this value. 
         cv::Mat label_mask; // Label mask will be all black except for label pixels which are white
         cv::threshold(labels[j], label_mask, label_threshold, label_maxval,cv::THRESH_BINARY);
 
         //For the color assigned to the label, we set the color channel(s) to the value of the label
         for (int i = 0; i < 3; i++) {
-            if (label_colors[j][i]) {
-                cv::bitwise_or(channel[i],labels[j],channel[i],label_mask); // This will make all pixels in the label mask opaque in that channel
-            }
+            //if (label_colors[j][i]) {
+                channel[i].setTo(label_colors[j][i],label_mask); // This will make all pixels in the label mask opaque in that channel
+                //cv::bitwise_or(channel[i],labels[j],channel[i],label_mask); // This will make all pixels in the label mask opaque in that channel
+            //}
         }
     }
 
