@@ -9,6 +9,7 @@ class PixelLabel : public Label {
 public:
     PixelLabel(int x, int y,int rad);
     cv::Mat load_image(int w, int h) const override;
+    std::pair<int,int> get_coordinate() const { return std::make_pair(x,y);}
 
 private:
     int x;

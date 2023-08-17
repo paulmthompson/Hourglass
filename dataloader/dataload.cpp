@@ -3,6 +3,7 @@
 #include <torch/torch.h>
 #include <opencv2/opencv.hpp>
 #include <string>
+#include <fstream>
 
 using json = nlohmann::json;
 using namespace torch;
@@ -234,6 +235,37 @@ std::vector<img_label_pair> read_json_file(training_options& opts) {
             }
         }  
     }
+
+    std::ofstream out("image_labels.csv");
+
+    out << "image_path,mask_path,pixel_x;pixel_y \n" << std::endl;
+    
+    for (const auto& img_label : img_label_files) {
+        auto img_path = std::filesystem::relative(img_label.img,data_path);
+        std::cout << "Image: " <<  img_path << std::endl;
+        out << img_path << ",";
+
+        for (const auto& label : img_label.labels) {
+
+            if (typeid(*label).name() == typeid(MaskLabel).name()) {
+
+                auto mask_path = std::filesystem::relative(dynamic_cast<MaskLabel*>(label.get())->get_path(),data_path);
+                std::cout << "Mask: " <<  mask_path << std::endl;
+                out << mask_path << ",";
+
+            } else if (typeid(*label).name() == typeid(PixelLabel).name()) {
+
+                auto pixel = dynamic_cast<PixelLabel*>(label.get())->get_coordinate();
+
+                std::cout << "Pixel: " << pixel << std::endl;
+                out << pixel.first << ";" << pixel.second << ",";
+                out << "\n";
+
+            }
+        }
+    }
+
+    out.close();
 
     std::cout << "The total number of images is " << img_label_files.size() << std::endl;
 
